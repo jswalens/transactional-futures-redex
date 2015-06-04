@@ -16,7 +16,7 @@
      (e e)
      (if e e e)
      (let [x e] e)))
-     ; do
+     ; do?
 
 (define-extended-language Eb Lb
   (E hole
@@ -62,11 +62,6 @@
 
 (define x? ; is it a variable?
   (redex-match Eb x))
-
-;(define-metafunction Eb
-;  Σ : number ... -> number
-;  [(Σ number ...)
-;   ,(apply + (term (number ...)))])
 
 (define-metafunction Eb
   subst : x v e -> e
