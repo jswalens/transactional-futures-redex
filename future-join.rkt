@@ -3,6 +3,7 @@
 (require redex/tut-subst)
 (require pict)
 
+; Base language
 (define-language Lb
   (c number
      boolean
@@ -15,10 +16,11 @@
      (+ e e)
      (e e)
      (if e e e)
-     (let [x e] e)))
+     (let [x e] e))
      ; do?
+  (p e)
 
-(define-extended-language Eb Lb
+  (P E)
   (E hole
      (+ E e)
      (+ v E)
@@ -27,40 +29,34 @@
      (if E e e)
      (let [x E] e)))
 
-(define-extended-language Eb1 Eb
-  (p e)
-  (P E))
-
-(define-extended-language Ef Eb
-  (c number
-     boolean
-     string)
-  (x variable-not-otherwise-mentioned)
-  (v c 
-     x
-     (λ x e))
+; Language with futures
+(define-extended-language Lf Lb
   (e ....
      (future e)
      (join e))
   (f variable)
   (task (f e))
   (p (task ...))
+
   (P (task ... TASK task ...))
   (TASK (f E))
   (E ....
      (join E)))
 
-(define x? ; is it a variable?
-  (redex-match Eb x))
+; Is it a variable (in the base language)?
+(define x?
+  (redex-match Lb x))
 
-(define-metafunction Eb
+; Substitution
+(define-metafunction Lb
   subst : x v e -> e
   [(subst x v e)
    ,(subst/proc x? (list (term x)) (list (term v)) (term e))])
 
-(define reduction-Eb1
+; Reduction relations for base language
+(define reduction-Lb
   (reduction-relation
-   Eb1
+   Lb
    #:domain p
    (--> (in-hole P (+ number ...))
         (in-hole P ,(apply + (term (number ...))))
@@ -78,13 +74,15 @@
         (in-hole P e_2)
         "if_false")))
 
-;(traces reduction-Eb1
+; Test for Lb
+;(traces reduction-Lb
 ;        (term
 ;         (let [double (λ x (+ x x))] (double 2))))
 
-(define reduction-Ef
+; Reduction relations for language with futures
+(define reduction-Lf
   (reduction-relation
-   Ef
+   Lf
    #:domain p
    (--> (in-hole P (+ number ...))
         (in-hole P ,(apply + (term (number ...))))
@@ -109,20 +107,21 @@
         (task_0 ... (f_1 (in-hole E v_3)) task_2 ... (f_3 v_3) task_4 ...)
         "join")))
 
-; test future and join
-;(traces reduction-Ef
+; Tests for Lf
+; 1. future and join
+;(traces reduction-Lf
 ;        '((f_0 (let [double (λ x (+ x x))]
 ;                 (let [four (future (double 2))]
 ;                   (join four))))))
-; test future
-;(traces reduction-Ef
+; 2. future
+;(traces reduction-Lf
 ;        '((f_0 (let [double (λ x (+ x x))] (future (double 2))))))
-; test join
-;(traces reduction-Ef
+; 3. join
+;(traces reduction-Lf
 ;        '((f_0 (join f_1))
 ;          (f_1 (+ 2 2))))
-; two futures
-(traces reduction-Ef
+; 4. two futures
+(traces reduction-Lf
         '((f_0 (let [double (λ x (+ x x))]
                  (let [four (future (double 2))]
                    (let [eight (future (double 4))]
