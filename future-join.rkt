@@ -39,11 +39,7 @@
   (v c 
      x
      (λ x e))
-  (e v
-     (+ e e)
-     (e e)
-     (if e e e)
-     (let [x e] e)
+  (e ....
      (future e)
      (join e))
   (f variable)
@@ -51,13 +47,7 @@
   (p (task ...))
   (P (task ... TASK task ...))
   (TASK (f E))
-  (E hole
-     (+ E e)
-     (+ v E)
-     (E e)
-     (v E)
-     (if E e e)
-     (let [x E] e)
+  (E ....
      (join E)))
 
 (define x? ; is it a variable?
