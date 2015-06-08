@@ -81,24 +81,10 @@
 
 ; Reduction relations for language with futures
 (define reduction-Lf
-  (reduction-relation
+  (extend-reduction-relation
+   reduction-Lb
    Lf
    #:domain p
-   (--> (in-hole P (+ number ...))
-        (in-hole P ,(apply + (term (number ...))))
-        "+")
-   (--> (in-hole P ((λ x e) v))
-        (in-hole P (subst x v e))
-        "βv: functie applicatie")
-   (--> (in-hole P (let [x v] e))
-        (in-hole P (subst x v e))
-        "let")
-   (--> (in-hole P (if #true e_1 e_2))
-        (in-hole P e_1)
-        "if_true")
-   (--> (in-hole P (if #false e_1 e_2))
-        (in-hole P e_2)
-        "if_false")
    (--> (task_0 ... (f_1 (in-hole E (future e))) task_2 ...)
         (task_0 ... (f_1 (in-hole E f_new)) (f_new e) task_2 ...)
         (fresh f_new)
