@@ -16,8 +16,8 @@
      (+ e e)
      (e e)
      (if e e e)
-     (let [x e] e))
-  ; do?
+     (let [x e] e)) ; TODO: multiple bindings in let
+  ; TODO: do
   (p ::= e)
   
   (P ::= E)
