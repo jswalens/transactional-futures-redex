@@ -36,8 +36,9 @@
     (test-equal (redex-match? l p t) #t))
   
   (test-in-language? Lb (term 1))
-  (define double (term (λ x (+ x x))))
-  (test-in-language? Lb double)
+  (define example-double
+    (term (λ x (+ x x))))
+  (test-in-language? Lb example-double)
   (test-in-language? Lb (term
                          (let [x 4]
                            (if true
@@ -57,6 +58,28 @@
   (TASK ::= (f E))
   (E ::= ....
      (join E)))
+
+(module+ test
+  (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
+  (define example-future-join
+    (term ((f_0 (let [double ,example-double]
+                  (let [four (future (double 2))]
+                    (join four)))))))
+  (test-in-language? Lf example-future-join)
+  (define example-future
+    (term ((f_0 (let [double ,example-double]
+                  (future (double 2)))))))
+  (test-in-language? Lf example-future)
+  (define example-join
+    (term ((f_0 (join f_1))
+           (f_1 (+ 2 2)))))
+  (test-in-language? Lf example-join)
+  (define example-two-futures
+    (term ((f_0 (let [double ,example-double]
+                  (let [four (future (double 2))]
+                    (let [eight (future (double 4))]
+                      (+ (join four) (join eight)))))))))
+  (test-in-language? Lf example-two-futures))
 
 ; Is it a variable (in the base language)?
 (define x?
