@@ -56,7 +56,7 @@
    ,(subst/proc x? (list (term x)) (list (term v)) (term e))])
 
 ; Reduction relations for base language
-(define reduction-Lb
+(define ->b
   (reduction-relation
    Lb
    #:domain p
@@ -78,7 +78,7 @@
 
 ; Test for Lb
 (module+ test
-  #;(traces reduction-Lb
+  #;(traces ->b
             (term
              (let [double (λ x (+ x x))] (double 2)))))
 
@@ -119,9 +119,9 @@
   (test-in-language? Lf example-two-futures))
 
 ; Reduction relations for language with futures
-(define reduction-Lf
+(define ->f
   (extend-reduction-relation
-   reduction-Lb
+   ->b
    Lf
    #:domain p
    (--> (task_0 ... (f_1 (in-hole E (future e))) task_2 ...)
@@ -134,12 +134,12 @@
 
 ; Tests for Lf
 (module+ test
-  #;(traces reduction-Lf example-future-join)
-  #;(traces reduction-Lf example-future)
-  #;(traces reduction-Lf example-join)
-  #;(traces reduction-Lf example-two-futures))
+  #;(traces ->f example-future-join)
+  #;(traces ->f example-future)
+  #;(traces ->f example-join)
+  #;(traces ->f example-two-futures))
 
-; (render-reduction-relation reduction-Lf)
+; (render-reduction-relation ->f)
 
 (module+ test
   (test-results))
