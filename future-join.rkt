@@ -6,8 +6,10 @@
 ; Base language
 (define-language Lb
   (c ::= number
-     boolean
+     b
      string)
+  (b ::= true
+     false)
   (x ::= variable-not-otherwise-mentioned)
   (v ::= c
      x
@@ -28,6 +30,19 @@
      (v E)
      (if E e e)
      (let [x E] e)))
+
+(module+ test
+  (define-syntax-rule (test-in-language? l t)
+    (test-equal (redex-match? l p t) #t))
+  
+  (test-in-language? Lb (term 1))
+  (define double (term (λ x (+ x x))))
+  (test-in-language? Lb double)
+  (test-in-language? Lb (term
+                         (let [x 4]
+                           (if true
+                               (+ x x)
+                               "error")))))
 
 ; Language with futures
 (define-extended-language Lf Lb
@@ -67,10 +82,10 @@
    (--> (in-hole P (let [x v] e))
         (in-hole P (subst x v e))
         "let")
-   (--> (in-hole P (if #true e_1 e_2))
+   (--> (in-hole P (if true e_1 e_2))
         (in-hole P e_1)
         "if_true")
-   (--> (in-hole P (if #false e_1 e_2))
+   (--> (in-hole P (if false e_1 e_2))
         (in-hole P e_2)
         "if_false")))
 
@@ -109,10 +124,13 @@
             '((f_0 (join f_1))
               (f_1 (+ 2 2))))
   ; 4. two futures
-  (traces reduction-Lf
-          '((f_0 (let [double (λ x (+ x x))]
-                   (let [four (future (double 2))]
-                     (let [eight (future (double 4))]
-                       (+ (join four) (join eight)))))))))
+  #;(traces reduction-Lf
+            '((f_0 (let [double (λ x (+ x x))]
+                     (let [four (future (double 2))]
+                       (let [eight (future (double 4))]
+                         (+ (join four) (join eight)))))))))
 
 ; (render-reduction-relation reduction-Lf)
+
+(module+ test
+  (test-results))
