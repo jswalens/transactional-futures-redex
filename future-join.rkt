@@ -35,15 +35,20 @@
   (define-syntax-rule (test-in-language? l t)
     (test-equal (redex-match? l p t) #t))
   
-  (test-in-language? Lb (term 1))
   (define example-double
     (term (λ x (+ x x))))
+  (define example-doubling
+    (term (let [double ,example-double] (double 2))))
+  (define example-base-language
+    (term (let [x 4]
+            (if true
+                (+ x x)
+                "error"))))
+
+  (test-in-language? Lb (term 1))
   (test-in-language? Lb example-double)
-  (test-in-language? Lb (term
-                         (let [x 4]
-                           (if true
-                               (+ x x)
-                               "error")))))
+  (test-in-language? Lb example-doubling)
+  (test-in-language? Lb example-base-language))
 
 ; Is it a variable (in the base language)?
 (define x?
@@ -78,9 +83,9 @@
 
 ; Test for Lb
 (module+ test
-  #;(traces ->b
-            (term
-             (let [double (λ x (+ x x))] (double 2)))))
+  #;(traces ->b example-doubling)
+  (test-->> ->b example-doubling (term 4))
+  (test-->> ->b example-base-language (term 8)))
 
 ; Language with futures
 (define-extended-language Lf Lb
