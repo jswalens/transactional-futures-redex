@@ -45,42 +45,6 @@
                                (+ x x)
                                "error")))))
 
-; Language with futures
-(define-extended-language Lf Lb
-  (e ::= ....
-     (future e)
-     (join e))
-  (f ::= variable)
-  (task ::= (f e))
-  (p ::= (task ...)) ; program = list of tasks = map f → e
-  
-  (P ::= (task ... TASK task ...))
-  (TASK ::= (f E))
-  (E ::= ....
-     (join E)))
-
-(module+ test
-  (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
-  (define example-future-join
-    (term ((f_0 (let [double ,example-double]
-                  (let [four (future (double 2))]
-                    (join four)))))))
-  (test-in-language? Lf example-future-join)
-  (define example-future
-    (term ((f_0 (let [double ,example-double]
-                  (future (double 2)))))))
-  (test-in-language? Lf example-future)
-  (define example-join
-    (term ((f_0 (join f_1))
-           (f_1 (+ 2 2)))))
-  (test-in-language? Lf example-join)
-  (define example-two-futures
-    (term ((f_0 (let [double ,example-double]
-                  (let [four (future (double 2))]
-                    (let [eight (future (double 4))]
-                      (+ (join four) (join eight)))))))))
-  (test-in-language? Lf example-two-futures))
-
 ; Is it a variable (in the base language)?
 (define x?
   (redex-match Lb x))
@@ -118,6 +82,42 @@
             (term
              (let [double (λ x (+ x x))] (double 2)))))
 
+; Language with futures
+(define-extended-language Lf Lb
+  (e ::= ....
+     (future e)
+     (join e))
+  (f ::= variable)
+  (task ::= (f e))
+  (p ::= (task ...)) ; program = list of tasks = map f → e
+  
+  (P ::= (task ... TASK task ...))
+  (TASK ::= (f E))
+  (E ::= ....
+     (join E)))
+
+(module+ test
+  (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
+  (define example-future-join
+    (term ((f_0 (let [double ,example-double]
+                  (let [four (future (double 2))]
+                    (join four)))))))
+  (test-in-language? Lf example-future-join)
+  (define example-future
+    (term ((f_0 (let [double ,example-double]
+                  (future (double 2)))))))
+  (test-in-language? Lf example-future)
+  (define example-join
+    (term ((f_0 (join f_1))
+           (f_1 (+ 2 2)))))
+  (test-in-language? Lf example-join)
+  (define example-two-futures
+    (term ((f_0 (let [double ,example-double]
+                  (let [four (future (double 2))]
+                    (let [eight (future (double 4))]
+                      (+ (join four) (join eight)))))))))
+  (test-in-language? Lf example-two-futures))
+
 ; Reduction relations for language with futures
 (define reduction-Lf
   (extend-reduction-relation
@@ -134,24 +134,10 @@
 
 ; Tests for Lf
 (module+ test
-  ; 1. future and join
-  #;(traces reduction-Lf
-            '((f_0 (let [double (λ x (+ x x))]
-                     (let [four (future (double 2))]
-                       (join four))))))
-  ; 2. future
-  #;(traces reduction-Lf
-            '((f_0 (let [double (λ x (+ x x))] (future (double 2))))))
-  ; 3. join
-  #;(traces reduction-Lf
-            '((f_0 (join f_1))
-              (f_1 (+ 2 2))))
-  ; 4. two futures
-  #;(traces reduction-Lf
-            '((f_0 (let [double (λ x (+ x x))]
-                     (let [four (future (double 2))]
-                       (let [eight (future (double 4))]
-                         (+ (join four) (join eight)))))))))
+  #;(traces reduction-Lf example-future-join)
+  #;(traces reduction-Lf example-future)
+  #;(traces reduction-Lf example-join)
+  #;(traces reduction-Lf example-two-futures))
 
 ; (render-reduction-relation reduction-Lf)
 
