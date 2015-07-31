@@ -17,9 +17,9 @@
   (e ::= v
      (+ e e)
      (e e)
-     (if e e e)
-     (let [x e] e)) ; TODO: multiple bindings in let
-  ; TODO: do
+     (let [x e] e) ; TODO: multiple bindings in let
+     (do e e ...)
+     (if e e e))
   (p ::= e)
   
   (P ::= E)
@@ -28,8 +28,9 @@
      (+ v E)
      (E e)
      (v E)
-     (if E e e)
-     (let [x E] e)))
+     (let [x E] e)
+     (do v ... E e ...)
+     (if E e e)))
 
 (module+ test
   (define-syntax-rule (test-in-language? l t)
@@ -42,9 +43,11 @@
   (define example-base-language
     (term (let [x 4]
             (if true
-                (+ x x)
+                (do
+                    "nothing"
+                  (+ x x))
                 "error"))))
-
+  
   (test-in-language? Lb (term 1))
   (test-in-language? Lb example-double)
   (test-in-language? Lb example-doubling)
@@ -74,6 +77,9 @@
    (--> (in-hole P (let [x v] e))
         (in-hole P (subst x v e))
         "let")
+   (--> (in-hole P (do v_0 ... v_n))
+        (in-hole P v_n)
+        "do")
    (--> (in-hole P (if true e_1 e_2))
         (in-hole P e_1)
         "if_true")
@@ -85,6 +91,7 @@
 (module+ test
   #;(traces ->b example-doubling)
   (test-->> ->b example-doubling (term 4))
+  #;(traces ->b example-base-language)
   (test-->> ->b example-base-language (term 8)))
 
 ; Language with futures
