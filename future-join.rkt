@@ -170,12 +170,29 @@
 
 ; Tests for Lf
 (module+ test
+  (define (same-elements? l1 l2)
+    (set=? (list->set l1) (list->set l2)))
+
   #;(traces ->f example-future-join)
-  (test-->> ->f example-future-join
+  (test-->> ->f
+            #:equiv same-elements?
+            example-future-join
             (term ((f_0 4) (f_new 4))))
   #;(traces ->f example-future)
+  (test-->> ->f
+            #:equiv same-elements?
+            example-future
+            (term ((f_0 f_new) (f_new 4))))
   #;(traces ->f example-join)
-  #;(traces ->f example-two-futures))
+  (test-->> ->f
+            #:equiv same-elements?
+            example-join
+            (term ((f_0 4) (f_1 4))))
+  #;(traces ->f example-two-futures)
+  (test-->> ->f
+            #:equiv same-elements?
+            example-two-futures
+            (term ((f_0 12) (f_new 4) (f_new1 8)))))
 
 ;(render-reduction-relation ->b)
 ;(render-reduction-relation ->f)
