@@ -227,27 +227,34 @@
 (module+ test
   (define-syntax-rule (make-program-t e)
     (term [((f_0 e)) ()]))
-
+  
+  (define example-tx-simple-tx
+    (term (do
+              (ref-set a (+ (deref a) 1))
+            (ref-set b (+ (deref b) 1))
+            (+ (deref a) (deref b)))))
   (define example-tx-simple
     (make-program-t
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
-        (do
-            (ref-set a (+ (deref a) 1))
-          (ref-set b (+ (deref b) 1))
-          (+ (deref a) (deref b)))))))
+        ,example-tx-simple-tx))))
   ; TODO: example with > 1 tx
-
+  
   (test-in-language? Lt example-tx-simple))
 
 ; Reduction relations and stuff for language with transactions
-(define-metafunction Lb
+#;(define-metafunction Lb
   extend : ((x any) ...)  (x ...) (any ...) -> ((x any) ...)
   [(extend ((x any) ...) (x_1 ...) (any_1 ...))
    ((x_1 any_1) ... (x any) ...)])
 
 (define-metafunction Lb
+  extend : ((any any) ...)  (any ...) (any ...) -> ((any any) ...)
+  [(extend ((any_x any_v) ...) (any_x1 ...) (any_v1 ...))
+   ((any_x1 any_v1) ... (any_x any_v) ...)])
+
+#;(define-metafunction Lb
   lookup : ((x any) ...) x -> any
   [(lookup ((x_1 any_1) ... (x any_t) (x_2 any_2) ...) x)
    any_t
@@ -255,17 +262,39 @@
   [(lookup any_1 any_2)
    ,(error 'lookup "not found: ~e in: ~e" (term x) (term any_2))])
 
+(define-metafunction Lb
+  lookup : ((any any) ...) any -> any
+  [(lookup ((any_x1 any_v1) ... (any_x any_v) (any_x2 any_v2) ...) any_x)
+   any_v
+   (side-condition (not (member (term any_x) (term (any_x1 ...)))))]
+  [(lookup any_v1 any_v2)
+   ,(error 'lookup "not found: ~e in: ~e" (term any_x) (term any_v2))])
+
+(define-metafunction Lb
+  contains? : ((any any) ...) any -> boolean
+  [(contains? ((any_x1 any_v1) ... (any_x any_v) (any_x2 any_v2) ...) any_x)
+   #true]
+  [(contains? any_v1 any_v2)
+   #false])
+
 (define =>t
   (reduction-relation
    Lt
-   #:domain p
+   #:domain [θ τ e]
    (--> [θ τ (in-hole E (ref v))]
         [θ (extend τ (r_new) (v)) (in-hole E r_new)]
         (fresh r_new)
         "ref")
    (--> [θ τ (in-hole E (deref r))]
-        [θ τ (in-hole E (lookup τ r))]
-        "deref")
+        [θ τ (in-hole E v)]
+        (where #true (contains? τ r))
+        (where v (lookup τ r))
+        "deref local")
+   (--> [θ τ (in-hole E (deref r))]
+        [θ τ (in-hole E v)]
+        (where #false (contains? τ r))
+        (where v (lookup θ r))
+        "deref global")
    (--> [θ τ (in-hole E (ref-set r v))]
         [θ (extend τ (r) (v)) (in-hole E v)]
         "ref-set")
@@ -274,7 +303,7 @@
         "nested atomic")
    (--> [θ τ (in-hole E e)]
         [θ τ (in-hole E e_1)]
-        (where (e_0 ... e_1 e_2 ...) (apply-reduction-relation ->b e))
+        (where (e_0 ... e_1 e_2 ...) ,(apply-reduction-relation ->b (term e)))
         "base language in tx")))
 
 (define ->t
@@ -288,7 +317,7 @@
         "ref out tx")
    (--> [(in-hole E (atomic e)) θ]
         [(in-hole E v) θ_1] ;TODO
-        (where [θ τ_1 v] (apply-reduction-relation =>t [θ () e]))
+        (where [θ τ_1 v] ,(apply-reduction-relation =>t (term [θ () e])))
         (where θ_1 (extend θ τ_1)) ; won't work: split τ...
         "atomic")))
 
@@ -297,6 +326,16 @@
   (test-->> ->t
             (term [((f_0 (ref 0))) ()])
             (term [((f_0 r_new)) ((r_new 0))]))
+  (test-->> =>t
+            (term [() () (ref 0)])
+            (term [() ((r_new 0)) r_new]))
+  (test-->> =>t
+            (term [((a 0) (b 1)) () (deref a)]) ; look up in θ
+            (term [((a 0) (b 1)) () 0]))
+  (test-->> =>t
+            (term [((a 0) (b 1)) ((a 2)) (deref a)]) ; look up in τ over θ
+            (term [((a 0) (b 1)) ((a 2)) 2]))
+  ;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
   ;(traces ->t example-tx-simple)
   #;(test-->> ->t
             example-tx-simple
