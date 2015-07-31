@@ -234,6 +234,7 @@
         (do
             (ref-set a (+ (deref a) 1))
           (ref-set b (+ (deref b) 1)))))))
+  ; TODO: example with > 1 tx
 
   (test-in-language? Lf example-tx-simple))
 
