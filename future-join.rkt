@@ -119,7 +119,7 @@
 
 ; Language with futures
 (define-extended-language Lf Lb
-  (f ::= variable)
+  (f ::= variable-not-otherwise-mentioned)
   (v ::= ....
      f) ; TODO: this doesn't seem necessary? maybe tests don't cover this?
   (e ::= ....
@@ -202,7 +202,7 @@
 
 ; Language with transactions
 (define-extended-language Lt Lf
-  (r ::= variable)
+  (r ::= variable-not-otherwise-mentioned)
   (v ::= ....
      r)
   (e ::= ....
@@ -322,10 +322,13 @@
         "atomic")))
 
 (module+ test
+  ; ref outside tx
   ;(traces ->t (make-program-t (ref 0)))
   (test-->> ->t
             (term [((f_0 (ref 0))) ()])
             (term [((f_0 r_new)) ((r_new 0))]))
+
+  ; =>t: things in tx
   (test-->> =>t
             (term [() () (ref 0)])
             (term [() ((r_new 0)) r_new]))
@@ -335,7 +338,14 @@
   (test-->> =>t
             (term [((a 0) (b 1)) ((a 2)) (deref a)]) ; look up in τ over θ
             (term [((a 0) (b 1)) ((a 2)) 2]))
+
+  ; base language in tx
+  (test--> =>t
+           (term [() () (+ 1 2)])
+           (term [() () 3]))
+  
   ;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
+
   ;(traces ->t example-tx-simple)
   #;(test-->> ->t
             example-tx-simple
