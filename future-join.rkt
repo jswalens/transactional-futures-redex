@@ -120,10 +120,12 @@
 
 ; Language with futures
 (define-extended-language Lf Lb
+  (f ::= variable)
+  (v ::= ....
+     f) ; TODO: this doesn't seem necessary? maybe tests don't cover this?
   (e ::= ....
      (future e)
      (join e))
-  (f ::= variable)
   (task ::= (f e))
   (p ::= (task ...)) ; program = list of tasks = map f → e
   
@@ -133,25 +135,31 @@
      (join E)))
 
 (module+ test
+  (define-syntax-rule (make-program e)
+    (term ((f_0 e))))
+  
   (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
   (define example-future-join
-    (term ((f_0 (let [(double ,example-double)
-                      (four (future (double 2)))]
-                  (join four))))))
+    (make-program
+     (let [(double ,example-double)
+           (four (future (double 2)))]
+       (join four))))
   (test-in-language? Lf example-future-join)
   (define example-future
-    (term ((f_0 (let [(double ,example-double)]
-                  (future (double 2)))))))
+    (make-program
+     (let [(double ,example-double)]
+       (future (double 2)))))
   (test-in-language? Lf example-future)
   (define example-join
     (term ((f_0 (join f_1))
            (f_1 (+ 2 2)))))
   (test-in-language? Lf example-join)
   (define example-two-futures
-    (term ((f_0 (let [(double ,example-double)
-                      (four (future (double 2)))
-                      (eight (future (double 4)))]
-                  (+ (join four) (join eight)))))))
+    (make-program
+     (let [(double ,example-double)
+           (four (future (double 2)))
+           (eight (future (double 4)))]
+       (+ (join four) (join eight)))))
   (test-in-language? Lf example-two-futures))
 
 ; Reduction relations for language with futures
@@ -172,7 +180,7 @@
 (module+ test
   (define (same-elements? l1 l2)
     (set=? (list->set l1) (list->set l2)))
-
+  
   #;(traces ->f example-future-join)
   (test-->> ->f
             #:equiv same-elements?
@@ -194,8 +202,42 @@
             example-two-futures
             (term ((f_0 12) (f_new 4) (f_new1 8)))))
 
-;(render-reduction-relation ->b)
-;(render-reduction-relation ->f)
+; Language with transactions
+(define-extended-language Lt Lf
+  (r ::= variable)
+  (v ::= ....
+     r)
+  (e ::= ....
+     (ref e)
+     (deref e)
+     (ref-set e e)
+     (atomic e)
+     (retry))
+  (task ::= (f e))
+  (θ ::= ((r v) ...))
+  (p ::= ((task ...) θ)) ; program = (list of tasks = map f → e) + heap
+  
+  (P ::= ((task ... TASK task ...) θ))
+  (TASK ::= (f E))
+  (E ::= ....
+     (ref E)
+     (deref E)
+     (ref-set E e)
+     (ref-set r E)))
 
 (module+ test
+  (define example-tx-simple
+    (make-program
+     (let [(a (ref 0))
+           (b (ref 1))]
+       (atomic
+        (do
+            (ref-set a (+ (deref a) 1))
+          (ref-set b (+ (deref b) 1)))))))
+
+  (test-in-language? Lf example-tx-simple))
+
+(module+ test
+  ;(render-reduction-relation ->b)
+  ;(render-reduction-relation ->f)
   (test-results))
