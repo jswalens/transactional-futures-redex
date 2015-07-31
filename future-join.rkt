@@ -27,7 +27,7 @@
      (+ E e)
      (+ v E)
      (v ... E e ...)
-     (let [(x v) ... (x E) (x e) ...] e)
+     (let [(x E) (x e) ...] e)
      (do v ... E e ...)
      (if E e e)))
 
@@ -94,9 +94,12 @@
    (--> (in-hole P ((fn [x_1 ..._n] e) v_1 ..._n))
         (in-hole P (subst [(v_1 x_1) ...] e))
         "β: function application")
-   (--> (in-hole P (let [(x v) ...] e))
-        (in-hole P (subst [(v x) ...] e))
-        "let")
+   (--> (in-hole P (let [(x_0 v_0) (x_1 e_1) ...] e))
+        (in-hole P (let [(x_1 (subst [(v_0 x_0)] e_1)) ...] (subst [(v_0 x_0)] e)))
+        "let 1")
+   (--> (in-hole P (let [] e))
+        (in-hole P e)
+        "let 0")
    (--> (in-hole P (do v_0 ... v_n))
         (in-hole P v_n)
         "do")
@@ -168,6 +171,8 @@
 ; Tests for Lf
 (module+ test
   #;(traces ->f example-future-join)
+  (test-->> ->f example-future-join
+            (term ((f_0 4) (f_new 4))))
   #;(traces ->f example-future)
   #;(traces ->f example-join)
   #;(traces ->f example-two-futures))
