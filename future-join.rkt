@@ -378,11 +378,11 @@
             (term [((f_0 (atomic (ref-set a (+ (deref a) (+ 1 2)))))) ((a 0))])
             (term [((f_0 3)) ((a 3) (a 0))]))
 
-  ; complete example
-  ;(traces ->t example-tx-simple)
-  #;(test-->> ->t
+  ; complete example: seems to work
+  (traces ->t example-tx-simple)
+  (test-->> ->t
             example-tx-simple
-            (term ((f_0 3)))))
+            (term [((f_0 3)) ((r_new1 2) (r_new 1) (r_new1 1) (r_new 0))])))
 
 (module+ test
   ;(render-reduction-relation ->b)
