@@ -231,10 +231,28 @@
        (atomic
         (do
             (ref-set a (+ (deref a) 1))
-          (ref-set b (+ (deref b) 1)))))))
+          (ref-set b (+ (deref b) 1))
+          (+ (deref a) (deref b)))))))
   ; TODO: example with > 1 tx
 
   (test-in-language? Lf example-tx-simple))
+
+; Reduction relation for language with transactions
+(define ->t
+  (extend-reduction-relation
+   ->f
+   Lt
+   #:domain p
+   (--> (in-hole P (atomic e))
+        (in-hole P e) ;TODO
+        "atomic")))
+
+(module+ test
+  #;(traces ->f example-tx-simple)
+  (test-->> ->f
+            #:equiv same-elements?
+            example-tx-simple
+            (term ((f_0 3)))))
 
 (module+ test
   ;(render-reduction-relation ->b)
