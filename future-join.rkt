@@ -316,7 +316,7 @@
         "nested atomic")
    (--> [θ τ (in-hole E e)]
         [θ τ (in-hole E e_1)]
-        (where (e_0 ... e_1 e_2 ...) ,(apply-reduction-relation ->b (term e)))
+        (where (e_0 ... e_1 e_2 ...) ,(apply-reduction-relation ->b (term e))); no *
         "base language in tx")))
 
 (define ->t
@@ -331,7 +331,7 @@
    (--> [(in-hole TASKS (atomic e)) θ]
         [(in-hole TASKS v) θ_1]
         (where (any ... [θ τ_1 v] any ...)
-               ,(apply-reduction-relation =>t (term [θ () e])))
+               ,(apply-reduction-relation* =>t (term [θ () e]))) ; note *
         (where θ_1 (extend-2 θ τ_1))
         ; XXX: ugly
         "atomic")))
@@ -374,11 +374,9 @@
   (test-->> ->t
             (term [((f_0 (atomic (ref-set a 1)))) ((a 0))])
             (term [((f_0 1)) ((a 1) (a 0))])) ; TODO: overwrite instead of add?
-  (traces ->t
-            (term [((f_0 (atomic (ref-set a (+ (deref a) 1))))) ((a 0))]))
   (test-->> ->t
-            (term [((f_0 (atomic (ref-set a (+ (deref a) 1))))) ((a 0))])
-            (term [((f_0 1)) ((a 1) (a 0))]))
+            (term [((f_0 (atomic (ref-set a (+ (deref a) (+ 1 2)))))) ((a 0))])
+            (term [((f_0 3)) ((a 3) (a 0))]))
 
   ; complete example
   ;(traces ->t example-tx-simple)
