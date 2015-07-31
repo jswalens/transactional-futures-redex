@@ -83,7 +83,7 @@
    ((subst-raw [(any_1 x_1) ... ] any) ...)]
   [(subst-raw [(any_1 x_1) ... ] any_*) any_*])
 
-; Reduction relations for base language
+; Reduction relation for base language
 (define ->b
   (reduction-relation
    Lb
@@ -110,7 +110,6 @@
         (in-hole P e_2)
         "if_false")))
 
-; Test for Lb
 (module+ test
   #;(traces ->b example-doubling)
   (test-->> ->b example-doubling (term 4))
@@ -162,7 +161,7 @@
        (+ (join four) (join eight)))))
   (test-in-language? Lf example-two-futures))
 
-; Reduction relations for language with futures
+; Reduction relation for language with futures
 (define ->f
   (extend-reduction-relation
    ->b
@@ -176,7 +175,6 @@
         (task_0 ... (f_1 (in-hole E v_3)) task_2 ... (f_3 v_3) task_4 ...)
         "join")))
 
-; Tests for Lf
 (module+ test
   (define (same-elements? l1 l2)
     (set=? (list->set l1) (list->set l2)))
