@@ -172,7 +172,8 @@
   #;(traces ->f example-join)
   #;(traces ->f example-two-futures))
 
-; (render-reduction-relation ->f)
+;(render-reduction-relation ->b)
+;(render-reduction-relation ->f)
 
 (module+ test
   (test-results))
