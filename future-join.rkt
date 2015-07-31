@@ -17,7 +17,7 @@
   (e ::= v
      (+ e e)
      (e e ...)
-     (let [x e] e) ; TODO: multiple bindings in let
+     (let [(x e) ...] e) ; Note: not as in Clojure
      (do e e ...)
      (if e e e))
   (p ::= e)
@@ -27,7 +27,7 @@
      (+ E e)
      (+ v E)
      (v ... E e ...)
-     (let [x E] e)
+     (let [(x v) ... (x E) (x e) ...] e)
      (do v ... E e ...)
      (if E e e)))
 
@@ -38,15 +38,16 @@
   (define example-double
     (term (fn [x] (+ x x))))
   (define example-doubling
-    (term (let [double ,example-double] (double 2))))
+    (term (let [(double ,example-double)] (double 2))))
   (define example-sum-3
     (term ((fn [x y z] (+ (+ x y) z)) 1 2 3)))
   (define example-base-language
-    (term (let [x 4]
+    (term (let [(x 4)
+                (y 5)]
             (if true
                 (do
                     "nothing"
-                  (+ x x))
+                  (+ x y))
                 "error"))))
   
   (test-in-language? Lb (term 1))
@@ -93,8 +94,8 @@
    (--> (in-hole P ((fn [x_1 ..._n] e) v_1 ..._n))
         (in-hole P (subst [(v_1 x_1) ...] e))
         "β: function application")
-   (--> (in-hole P (let [x v] e))
-        (in-hole P (subst [(v x)] e))
+   (--> (in-hole P (let [(x v) ...] e))
+        (in-hole P (subst [(v x) ...] e))
         "let")
    (--> (in-hole P (do v_0 ... v_n))
         (in-hole P v_n)
@@ -112,7 +113,7 @@
   (test-->> ->b example-doubling (term 4))
   (test-->> ->b example-sum-3 (term 6))
   #;(traces ->b example-base-language)
-  (test-->> ->b example-base-language (term 8)))
+  (test-->> ->b example-base-language (term 9)))
 
 ; Language with futures
 (define-extended-language Lf Lb
@@ -131,12 +132,12 @@
 (module+ test
   (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
   (define example-future-join
-    (term ((f_0 (let [double ,example-double]
-                  (let [four (future (double 2))]
-                    (join four)))))))
+    (term ((f_0 (let [(double ,example-double)
+                      (four (future (double 2)))]
+                  (join four))))))
   (test-in-language? Lf example-future-join)
   (define example-future
-    (term ((f_0 (let [double ,example-double]
+    (term ((f_0 (let [(double ,example-double)]
                   (future (double 2)))))))
   (test-in-language? Lf example-future)
   (define example-join
@@ -144,10 +145,10 @@
            (f_1 (+ 2 2)))))
   (test-in-language? Lf example-join)
   (define example-two-futures
-    (term ((f_0 (let [double ,example-double]
-                  (let [four (future (double 2))]
-                    (let [eight (future (double 4))]
-                      (+ (join four) (join eight)))))))))
+    (term ((f_0 (let [(double ,example-double)
+                      (four (future (double 2)))
+                      (eight (future (double 4)))]
+                  (+ (join four) (join eight)))))))
   (test-in-language? Lf example-two-futures))
 
 ; Reduction relations for language with futures
