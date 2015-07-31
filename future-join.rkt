@@ -343,8 +343,12 @@
   (test--> =>t
            (term [() () (+ 1 2)])
            (term [() () 3]))
-  
+
+  ; in a tx
   ;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
+  (test-->> =>t
+            (term [((a 0) (b 1)) () ,example-tx-simple-tx])
+            (term [((a 0) (b 1)) ((b 2) (a 1)) 3]))
 
   ;(traces ->t example-tx-simple)
   #;(test-->> ->t
