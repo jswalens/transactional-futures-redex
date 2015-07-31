@@ -374,6 +374,11 @@
   (test-->> ->t
             (term [((f_0 (atomic (ref-set a 1)))) ((a 0))])
             (term [((f_0 1)) ((a 1) (a 0))])) ; TODO: overwrite instead of add?
+  (traces ->t
+            (term [((f_0 (atomic (ref-set a (+ (deref a) 1))))) ((a 0))]))
+  (test-->> ->t
+            (term [((f_0 (atomic (ref-set a (+ (deref a) 1))))) ((a 0))])
+            (term [((f_0 1)) ((a 1) (a 0))]))
 
   ; complete example
   ;(traces ->t example-tx-simple)
