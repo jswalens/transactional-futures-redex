@@ -134,18 +134,18 @@
      (join E)))
 
 (module+ test
-  (define-syntax-rule (make-program e)
+  (define-syntax-rule (make-program-f e)
     (term ((f_0 e))))
   
   (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
   (define example-future-join
-    (make-program
+    (make-program-f
      (let [(double ,example-double)
            (four (future (double 2)))]
        (join four))))
   (test-in-language? Lf example-future-join)
   (define example-future
-    (make-program
+    (make-program-f
      (let [(double ,example-double)]
        (future (double 2)))))
   (test-in-language? Lf example-future)
@@ -154,7 +154,7 @@
            (f_1 (+ 2 2)))))
   (test-in-language? Lf example-join)
   (define example-two-futures
-    (make-program
+    (make-program-f
      (let [(double ,example-double)
            (four (future (double 2)))
            (eight (future (double 4)))]
@@ -212,10 +212,11 @@
      (atomic e)
      (retry))
   (task ::= (f e))
-  (θ ::= ((r v) ...))
-  (p ::= ((task ...) θ)) ; program = (list of tasks = map f → e) + heap
+  (θ ::= [(r v) ...])
+  (τ ::= [(r v) ...])
+  (p ::= [(task ...) θ]) ; program = (list of tasks = map f → e) + heap
   
-  (P ::= ((task ... TASK task ...) θ))
+  (P ::= [(task ... TASK task ...) θ])
   (TASK ::= (f E))
   (E ::= ....
      (ref E)
@@ -224,8 +225,11 @@
      (ref-set r E)))
 
 (module+ test
+  (define-syntax-rule (make-program-t e)
+    (term [((f_0 e)) ()]))
+
   (define example-tx-simple
-    (make-program
+    (make-program-t
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
@@ -235,22 +239,66 @@
           (+ (deref a) (deref b)))))))
   ; TODO: example with > 1 tx
 
-  (test-in-language? Lf example-tx-simple))
+  (test-in-language? Lt example-tx-simple))
 
-; Reduction relation for language with transactions
+; Reduction relations and stuff for language with transactions
+(define-metafunction Lb
+  extend : ((x any) ...)  (x ...) (any ...) -> ((x any) ...)
+  [(extend ((x any) ...) (x_1 ...) (any_1 ...))
+   ((x_1 any_1) ... (x any) ...)])
+
+(define-metafunction Lb
+  lookup : ((x any) ...) x -> any
+  [(lookup ((x_1 any_1) ... (x any_t) (x_2 any_2) ...) x)
+   any_t
+   (side-condition (not (member (term x) (term (x_1 ...)))))]
+  [(lookup any_1 any_2)
+   ,(error 'lookup "not found: ~e in: ~e" (term x) (term any_2))])
+
+(define =>t
+  (reduction-relation
+   Lt
+   #:domain p
+   (--> [θ τ (in-hole E (ref v))]
+        [θ (extend τ (r_new) (v)) (in-hole E r_new)]
+        (fresh r_new)
+        "ref")
+   (--> [θ τ (in-hole E (deref r))]
+        [θ τ (in-hole E (lookup τ r))]
+        "deref")
+   (--> [θ τ (in-hole E (ref-set r v))]
+        [θ (extend τ (r) (v)) (in-hole E v)]
+        "ref-set")
+   (--> [θ τ (in-hole E (atomic e))]
+        [θ τ (in-hole E e)]
+        "nested atomic")
+   (--> [θ τ (in-hole E e)]
+        [θ τ (in-hole E e_1)]
+        (where (e_0 ... e_1 e_2 ...) (apply-reduction-relation ->b e))
+        "base language in tx")))
+
 (define ->t
   (extend-reduction-relation
    ->f
    Lt
    #:domain p
-   (--> (in-hole P (atomic e))
-        (in-hole P e) ;TODO
+   (--> [(in-hole E (ref v)) θ]
+        [(in-hole E r_new) (extend θ (r_new) (v))]
+        (fresh r_new)
+        "ref out tx")
+   (--> [(in-hole E (atomic e)) θ]
+        [(in-hole E v) θ_1] ;TODO
+        (where [θ τ_1 v] (apply-reduction-relation =>t [θ () e]))
+        (where θ_1 (extend θ τ_1)) ; won't work: split τ...
         "atomic")))
 
 (module+ test
-  #;(traces ->f example-tx-simple)
-  (test-->> ->f
-            #:equiv same-elements?
+  ;(traces ->t (make-program-t (ref 0)))
+  (test-->> ->t
+            (term [((f_0 (ref 0))) ()])
+            (term [((f_0 r_new)) ((r_new 0))]))
+  ;(traces ->t example-tx-simple)
+  #;(test-->> ->t
             example-tx-simple
             (term ((f_0 3)))))
 
