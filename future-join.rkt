@@ -13,7 +13,7 @@
   (x ::= variable-not-otherwise-mentioned)
   (v ::= c
      x
-     (λ [x ...] e))
+     (fn [x ...] e))
   (e ::= v
      (+ e e)
      (e e ...)
@@ -36,11 +36,11 @@
     (test-equal (redex-match? l p t) #t))
   
   (define example-double
-    (term (λ [x] (+ x x))))
+    (term (fn [x] (+ x x))))
   (define example-doubling
     (term (let [double ,example-double] (double 2))))
   (define example-sum-3
-    (term ((λ [x y z] (+ (+ x y) z)) 1 2 3)))
+    (term ((fn [x y z] (+ (+ x y) z)) 1 2 3)))
   (define example-base-language
     (term (let [x 4]
             (if true
@@ -90,7 +90,7 @@
    (--> (in-hole P (+ number ...))
         (in-hole P ,(apply + (term (number ...))))
         "+")
-   (--> (in-hole P ((λ [x_1 ..._n] e) v_1 ..._n))
+   (--> (in-hole P ((fn [x_1 ..._n] e) v_1 ..._n))
         (in-hole P (subst [(v_1 x_1) ...] e))
         "β: function application")
    (--> (in-hole P (let [x v] e))
