@@ -128,7 +128,8 @@
   (task ::= (f e))
   (p ::= (task ...)) ; program = list of tasks = map f → e
   
-  (P ::= (task ... TASK task ...))
+  (P ::= TASKS)
+  (TASKS ::= (task ... TASK task ...))
   (TASK ::= (f E))
   (E ::= ....
      (join E)))
@@ -216,7 +217,8 @@
   (τ ::= [(r v) ...])
   (p ::= [(task ...) θ]) ; program = (list of tasks = map f → e) + heap
   
-  (P ::= [(task ... TASK task ...) θ])
+  (P ::= [TASKS θ])
+  (TASKS ::= (task ... TASK task ...))
   (TASK ::= (f E))
   (E ::= ....
      (ref E)
@@ -244,6 +246,7 @@
   (test-in-language? Lt example-tx-simple))
 
 ; Reduction relations and stuff for language with transactions
+; TODO: extend: overwrite instead of add?
 #;(define-metafunction Lb
   extend : ((x any) ...)  (x ...) (any ...) -> ((x any) ...)
   [(extend ((x any) ...) (x_1 ...) (any_1 ...))
@@ -253,6 +256,16 @@
   extend : ((any any) ...)  (any ...) (any ...) -> ((any any) ...)
   [(extend ((any_x any_v) ...) (any_x1 ...) (any_v1 ...))
    ((any_x1 any_v1) ... (any_x any_v) ...)])
+
+(define-metafunction Lb
+  extend-2 : ((any any) ...) ((any any) ...) -> ((any any) ...)
+  [(extend-2 (any_1 ...) (any_2 ...))
+   (any_2 ... any_1 ...)])
+
+(module+ test
+  (test-equal (term (extend ((a 0) (b 1)) (a) (55))) (term ((a 55) (a 0) (b 1))))
+  (test-equal (term (extend-2 ((a 0) (b 1)) ((a 55) (c 33))))
+              (term ((a 55) (c 33) (a 0) (b 1))))) ; XXX ugly
 
 #;(define-metafunction Lb
   lookup : ((x any) ...) x -> any
@@ -311,14 +324,16 @@
    ->f
    Lt
    #:domain p
-   (--> [(in-hole E (ref v)) θ]
-        [(in-hole E r_new) (extend θ (r_new) (v))]
+   (--> [(in-hole TASKS (ref v)) θ]
+        [(in-hole TASKS r_new) (extend θ (r_new) (v))]
         (fresh r_new)
         "ref out tx")
-   (--> [(in-hole E (atomic e)) θ]
-        [(in-hole E v) θ_1] ;TODO
-        (where [θ τ_1 v] ,(apply-reduction-relation =>t (term [θ () e])))
-        (where θ_1 (extend θ τ_1)) ; won't work: split τ...
+   (--> [(in-hole TASKS (atomic e)) θ]
+        [(in-hole TASKS v) θ_1]
+        (where (any ... [θ τ_1 v] any ...)
+               ,(apply-reduction-relation =>t (term [θ () e])))
+        (where θ_1 (extend-2 θ τ_1))
+        ; XXX: ugly
         "atomic")))
 
 (module+ test
@@ -350,6 +365,17 @@
             (term [((a 0) (b 1)) () ,example-tx-simple-tx])
             (term [((a 0) (b 1)) ((b 2) (a 1)) 3]))
 
+  ; atomic
+  ;(traces ->t (term [((f_0 (atomic 5))) ()]))
+  ; FIXME: doesn't work because 5 doesn't reduce to 5...
+  (test-->> ->t
+            (term [((f_0 (atomic (deref a)))) ((a 0))])
+            (term [((f_0 0)) ((a 0))]))
+  (test-->> ->t
+            (term [((f_0 (atomic (ref-set a 1)))) ((a 0))])
+            (term [((f_0 1)) ((a 1) (a 0))])) ; TODO: overwrite instead of add?
+
+  ; complete example
   ;(traces ->t example-tx-simple)
   #;(test-->> ->t
             example-tx-simple
