@@ -63,19 +63,21 @@
             (term [(f [] [] [] [] (+ 1 1))])
             (term [(f [] [] [] [] 2)])))
 
-#;(define ->tf
-    (extend-reduction-relation
-     ->f
-     Ltf
-     #:domain p
-     (--> [(in-hole TASKS (ref v)) θ]
-          [(in-hole TASKS r_new) (extend θ (r_new) (v))]
-          (fresh r_new)
-          "ref out tx")
-     (--> [(in-hole TASKS (atomic e)) θ]
-          [(in-hole TASKS v) θ_1]
-          (where (any ... [θ τ_1 v] any ...)
-                 ,(apply-reduction-relation* =>t (term [θ () e]))) ; note *
-          (where θ_1 (extend-2 θ τ_1))
-          ; XXX: ugly
-          "atomic")))
+(define ->tf
+  (extend-reduction-relation
+   ->f
+   Ltf
+   #:domain p
+   (--> [(in-hole TASKS (atomic e)) θ]
+        [(in-hole TASKS v) θ_1]
+        (where (any ... [tx-task ... (f θ τ_1 spawned_1 merged_1 v) tx-task ...] any ...)
+               ,(apply-reduction-relation* =>tf (term [(f θ [] [] [] e)]))) ; note *
+        (fresh f)
+        (where θ_1 (extend-2 θ τ_1))
+        ; TODO: side condition: spawned ⊆ merged
+        "atomic")))
+
+(module+ test
+  (test-->> ->tf
+            example-tx-futs-simple
+            (term 'todo)))
