@@ -367,8 +367,9 @@
             (term [((a 0) (b 1)) ((b 2) (a 1)) 3]))
 
   ; atomic
-  ;(traces ->t (term [((f_0 (atomic 5))) ()]))
-  ; FIXME: doesn't work because 5 doesn't reduce to 5...
+  (test-->> ->t
+            (term [((f_0 (atomic 5))) ()])
+            (term [((f_0 5)) ()]))
   (test-->> ->t
             (term [((f_0 (atomic (deref a)))) ((a 0))])
             (term [((f_0 0)) ((a 0))]))
