@@ -166,13 +166,13 @@
             (term [((a 0) (b 1)) ((a 2)) 2]))
 
   ; base language in tx
-  (test--> =>t
+  (test-->> =>t
            (term [() () (+ 1 2)])
            (term [() () 3]))
 
   ; just base language (outside tx)
-  (test--> ->t
-           (term [((f_0 (+ 1 1))) ()])
+  (test-->> ->t
+           (term [((f_0 (let [(a 1)] (+ a a)))) ()])
            (term [((f_0 2)) ()]))
   
   ; in a tx
