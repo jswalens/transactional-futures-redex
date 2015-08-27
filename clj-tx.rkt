@@ -191,7 +191,7 @@
             (term [((f_0 3)) ((a 3) (a 0))]))
 
   ; complete example: seems to work
-  (traces ->t example-tx-simple)
+  #;(traces ->t example-tx-simple)
   (test-->> ->t
             example-tx-simple
             (term [((f_0 3)) ((r_new1 2) (r_new 1) (r_new1 1) (r_new 0))])))
