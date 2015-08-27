@@ -4,7 +4,7 @@
 (require "clj-base.rkt")
 (require "clj-futures.rkt")
 
-(provide Lt ->t)
+(provide Lt ->t =>t)
 
 (module+ test
   (require (submod "clj-base.rkt" test))
@@ -104,7 +104,7 @@
 (define =>t
   (reduction-relation
    Lt
-   #:domain [θ τ e]
+   #:domain [θ τ e]  ; TODO: add to syntax: tx ::= [θ τ e]
    (--> [θ τ (in-hole E (ref v))]
         [θ (extend τ (r_new) (v)) (in-hole E r_new)]
         (fresh r_new)
@@ -170,6 +170,11 @@
            (term [() () (+ 1 2)])
            (term [() () 3]))
 
+  ; just base language (outside tx)
+  (test--> ->t
+           (term [((f_0 (+ 1 1))) ()])
+           (term [((f_0 2)) ()]))
+  
   ; in a tx
   ;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
   (test-->> =>t
