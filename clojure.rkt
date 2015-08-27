@@ -6,9 +6,9 @@
 ; Base language
 (define-language Lb
   (c ::= number
-     b
+     bool
      string)
-  (b ::= true
+  (bool ::= true
      false)
   (x ::= variable-not-otherwise-mentioned)
   (v ::= c
@@ -121,7 +121,7 @@
 (define-extended-language Lf Lb
   (f ::= variable-not-otherwise-mentioned)
   (v ::= ....
-     f) ; TODO: this doesn't seem necessary? maybe tests don't cover this?
+     f)
   (e ::= ....
      (future e)
      (join e))
@@ -263,7 +263,8 @@
    (any_2 ... any_1 ...)])
 
 (module+ test
-  (test-equal (term (extend ((a 0) (b 1)) (a) (55))) (term ((a 55) (a 0) (b 1))))
+  (test-equal (term (extend ((a 0) (b 1)) (a) (55)))
+              (term ((a 55) (a 0) (b 1))))
   (test-equal (term (extend-2 ((a 0) (b 1)) ((a 55) (c 33))))
               (term ((a 55) (c 33) (a 0) (b 1))))) ; XXX ugly
 
@@ -316,7 +317,7 @@
         "nested atomic")
    (--> [θ τ (in-hole E e)]
         [θ τ (in-hole E e_1)]
-        (where (e_0 ... e_1 e_2 ...) ,(apply-reduction-relation ->b (term e))); no *
+        (where (e_0 ... e_1 e_2 ...) ,(apply-reduction-relation ->b (term e))) ; no *
         "base language in tx")))
 
 (define ->t
