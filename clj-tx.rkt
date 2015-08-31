@@ -37,6 +37,7 @@
      (ref-set r E)))
 
 (module+ test
+  ; TODO: rename to "inject"
   (define-syntax-rule (make-program-t e)
     (term [((f_0 e)) ()]))
   
