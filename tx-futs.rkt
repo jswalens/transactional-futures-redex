@@ -51,11 +51,26 @@
   [(set-union (any_0 ...) (any_1 ...))
    (any_0 ... any_1 ...)])
 
+(define-metafunction Lb
+  member? : any (any ...) -> boolean
+  [(member? any_x (any_0 ... any_x any_1 ...))
+   #true]
+  [(member? any_x any_list)
+   #false])
+
 (module+ test
   (test-equal (term (set-add (a b c) d))
               (term (a b c d)))
   (test-equal (term (set-union (a b c) (d e)))
-              (term (a b c d e))))
+              (term (a b c d e)))
+  (test-equal (term (member? a (a b c)))
+              (term #true))
+  (test-equal (term (member? b (a b c)))
+              (term #true))
+  (test-equal (term (member? c (a b c)))
+              (term #true))
+  (test-equal (term (member? d (a b c)))
+              (term #false)))
 
 (define =>tf
   (reduction-relation
@@ -73,7 +88,7 @@
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         [tx-task_0 ... (f σ (extend-2 τ τ_2) spawned merged_new (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         ; TODO: side condition spawned_2 ⊆ merged_2
-        (where #false (member f_2 merged))
+        (where #false (member? f_2 merged))
         (where merged_new (set-add (set-union merged merged_2) f_2))
         "join 1")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
