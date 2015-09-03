@@ -15,28 +15,22 @@
 
 ; Language with transactions
 (define-extended-language Ltf Lt
-  ; Same as in Lt:
-  (task ::= (f e))
-  (θ ::= [(r v) ...])
-  (τ ::= [(r v) ...])
-  ; Here we add:
   (σ ::= [(r v) ...])
   (spawned ::= [tx-task ...]) ; ordered
   (merged  ::= [tx-task ...]) ; unordered
   (tx-task ::= (f σ τ spawned merged e))
   (tx      ::= [tx-task ...])
-  ; Same as in Lt:
-  (p ::= [(task ...) θ]) ; program = (list of tasks = map f → e) + heap
   
   ; Same as in Lt:
-  (P ::= [TASKS θ])
-  (TASKS ::= (task ... TASK task ...))
-  (TASK ::= (f E))
+  ;(P ::= [TASKS θ])
+  ;(TASKS ::= (task ... TASK task ...))
+  ;(TASK ::= (f E))
+
   (TX ::= [tx-task ... TX-TASK tx-task ...])
   (TX-TASK ::= (f σ τ spawned merged E)))
 
 (module+ test
-  (define example-tx-futs-simple
+  (define example-tx-futs
     (make-program-t
      (let [(a (ref 0))
            (b (ref 1))]
@@ -45,17 +39,26 @@
               (y (future (ref-set b (+ (deref b) 1))))]
           (+ (join x) (join y)))))))
   
-  (test-in-language? Ltf example-tx-futs-simple))
+  (test-in-language? Ltf example-tx-futs))
 
 (define =>tf
   (reduction-relation
    Ltf
    #:domain tx
-   (--> [tx-task_0 ... (f σ τ spawned merged e) tx-task_1 ...]
-        [tx-task_0 ... (f σ τ_1 spawned merged e_1) tx-task_1 ...]
+   (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E e)) tx-task_1 ...]
+        [tx-task_0 ... (f σ τ_1 spawned merged (in-hole E e_1)) tx-task_1 ...]
         (where (any ... [σ τ_1 e_1] any ...)
                ,(apply-reduction-relation =>t (term [σ τ e]))) ; no *
-        "existing tx stuff")))
+        "existing tx stuff")
+   (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (future e))) tx-task_1 ...]
+        [tx-task_0 ... (f σ τ spawned ; TODO: extend met f_new (see clj-tx.rkt)
+                          merged (in-hole E f_new)) (f_new #;(extend σ τ) σ [] [] merged e) tx-task_1 ...]
+        (fresh f_new)
+        "future in tx")
+   (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
+        [tx-task_0 ... (f σ τ spawned merged (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
+        ; TODO: join 1 tov 2 + side conditions
+        "join")))
 
 (module+ test
   (test-equal (redex-match? Ltf tx (term [(f [] [] [] [] (+ 1 1))])) #t)
@@ -65,7 +68,7 @@
 
 (define ->tf
   (extend-reduction-relation
-   ->f
+   ->t
    Ltf
    #:domain p
    (--> [(in-hole TASKS (atomic e)) θ]
@@ -79,5 +82,23 @@
 
 (module+ test
   (test-->> ->tf
-            example-tx-futs-simple
+            (make-program-t (let [(a 1)] (+ a a)))
+            (term [[(f_0 2)] []]))
+  
+  (define example-tx-futs-inside-tx
+    (term (let [(x (future (ref-set r_1 (+ (deref r_1) 1))))
+                (y (future (ref-set r_0 (+ (deref r_0) 1))))]
+            (+ (join x) (join y)))))
+  ;(traces ->b (term ,example-tx-futs-inside-tx))
+  ;(traces =>t (term [[(r_1 1) (r_0 0)] [] ,example-tx-futs-inside-tx]))
+  (traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-inside-tx)]))
+  (test-->> =>tf
+            (term [(f       [(r_1 1) (r_0 0)] []                []  []  ,example-tx-futs-inside-tx)])
+            (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] any any 3)
+                   (f_new1  [(r_1 1) (r_0 0)] [(r_0 1)]         any any 1)
+                   (f_new   [(r_1 1) (r_0 0)] [(r_1 2)]         any any 2)]))
+  
+  ;(traces ->tf example-tx-futs)
+  (test-->> ->tf
+            example-tx-futs
             (term 'todo)))

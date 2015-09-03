@@ -17,7 +17,8 @@
      (future e)
      (join e))
   (task ::= (f e))
-  (p ::= (task ...)) ; program = list of tasks = map f → e
+  (tasks ::= (task ...)) ; map f → e
+  (p ::= tasks) ; program = list of tasks
   
   (P ::= TASKS)
   (TASKS ::= (task ... TASK task ...))

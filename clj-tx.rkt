@@ -22,10 +22,11 @@
      (ref-set e e)
      (atomic e)
      (retry))
-  (task ::= (f e))
   (θ ::= [(r v) ...])
   (τ ::= [(r v) ...])
-  (p ::= [(task ...) θ]) ; program = (list of tasks = map f → e) + heap
+  (p ::= [tasks θ]) ; program = list of tasks + heap
+
+  (tx ::= [θ τ e])
   
   (P ::= [TASKS θ])
   (TASKS ::= (task ... TASK task ...))
@@ -34,7 +35,9 @@
      (ref E)
      (deref E)
      (ref-set E e)
-     (ref-set r E)))
+     (ref-set r E))
+
+  (TX ::= [θ τ E]))
 
 (module+ test
   ; TODO: rename to "inject"
@@ -105,7 +108,7 @@
 (define =>t
   (reduction-relation
    Lt
-   #:domain [θ τ e]  ; TODO: add to syntax: tx ::= [θ τ e]
+   #:domain tx
    (--> [θ τ (in-hole E (ref v))]
         [θ (extend τ (r_new) (v)) (in-hole E r_new)]
         (fresh r_new)
@@ -147,6 +150,9 @@
         (where θ_1 (extend-2 θ τ_1))
         ; XXX: ugly
         "atomic")))
+
+; Note: if there's no *, we need to use (in-hole E e) -> (in-hole E e_1), if there is a * we should not.
+; Exercise for the reader: why?
 
 (module+ test
   ; ref outside tx
