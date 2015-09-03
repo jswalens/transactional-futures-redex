@@ -4,7 +4,7 @@
 (require "clj-base.rkt")
 (require "clj-futures.rkt")
 
-(provide Lt ->t =>t)
+(provide Lt ->t =>t extend extend-2)
 
 (module+ test
   (require (submod "clj-base.rkt" test))

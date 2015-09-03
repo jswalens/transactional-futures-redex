@@ -16,8 +16,8 @@
 ; Language with transactions
 (define-extended-language Ltf Lt
   (σ ::= [(r v) ...])
-  (spawned ::= [tx-task ...]) ; ordered
-  (merged  ::= [tx-task ...]) ; unordered
+  (spawned ::= [f ...]) ; ordered
+  (merged  ::= [f ...]) ; unordered
   (tx-task ::= (f σ τ spawned merged e))
   (tx      ::= [tx-task ...])
   
@@ -41,6 +41,15 @@
   
   (test-in-language? Ltf example-tx-futs))
 
+(define-metafunction Lb
+  set-add : (any ...) any -> (any ...)
+  [(set-add (any_0 ...) any_1)
+   (any_0 ... any_1)])
+
+(module+ test
+  (test-equal (term (set-add (a b c) d))
+              (term (a b c d))))
+
 (define =>tf
   (reduction-relation
    Ltf
@@ -51,8 +60,7 @@
                ,(apply-reduction-relation =>t (term [σ τ e]))) ; no *
         "existing tx stuff")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (future e))) tx-task_1 ...]
-        [tx-task_0 ... (f σ τ spawned ; TODO: extend met f_new (see clj-tx.rkt)
-                          merged (in-hole E f_new)) (f_new #;(extend σ τ) σ [] [] merged e) tx-task_1 ...]
+        [tx-task_0 ... (f σ τ (set-add spawned f_new) merged (in-hole E f_new)) (f_new (extend-2 σ τ) [] [] merged e) tx-task_1 ...]
         (fresh f_new)
         "future in tx")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
