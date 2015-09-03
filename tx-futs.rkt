@@ -120,9 +120,8 @@
    #:domain p
    (--> [(in-hole TASKS (atomic e)) θ]
         [(in-hole TASKS v) θ_1]
-        (fresh f)
-        (where (any ... [tx-task_0 ... (f θ τ_1 spawned_1 merged_1 v) tx-task_2 ...] any ...)
-               ,(apply-reduction-relation* =>tf (term [(f θ [] [] [] e)]))) ; note *
+        (where (any ... [(f_root θ τ_1 spawned_1 merged_1 v) tx-task_2 ...] any ...)
+               ,(apply-reduction-relation* =>tf (term [(f_root θ [] [] [] e)]))) ; note *
         (where #t (subset? spawned_1 merged_1))
         (where θ_1 (extend-2 θ τ_1))
         "atomic")))
@@ -145,7 +144,7 @@
                    (f_new1  [(r_1 1) (r_0 0)] [(r_1 2)]         []             []             2)
                    (f_new   [(r_1 1) (r_0 0)] [(r_0 1)]         []             []             1)]))
 
-  ;(traces ->tf example-tx-futs)
+  (traces ->tf example-tx-futs)
   (test-->> ->tf
             example-tx-futs
-            (term 'todo)))
+            (term [[(f_0 3)] [(r_new1 2) (r_new 1) (r_new1 1) (r_new 0)]])))
