@@ -109,9 +109,9 @@
    #:domain p
    (--> [(in-hole TASKS (atomic e)) θ]
         [(in-hole TASKS v) θ_1]
-        (where (any ... [tx-task ... (f θ τ_1 spawned_1 merged_1 v) tx-task ...] any ...)
-               ,(apply-reduction-relation* =>tf (term [(f θ [] [] [] e)]))) ; note *
         (fresh f)
+        (where (any ... [tx-task_0 ... (f θ τ_1 spawned_1 merged_1 v) tx-task_2 ...] any ...)
+               ,(apply-reduction-relation* =>tf (term [(f θ [] [] [] e)]))) ; note *
         (where θ_1 (extend-2 θ τ_1))
         ; TODO: side condition: spawned ⊆ merged
         "atomic")))
@@ -127,13 +127,15 @@
             (+ (join x) (join y)))))
   ;(traces ->b (term ,example-tx-futs-inside-tx))
   ;(traces =>t (term [[(r_1 1) (r_0 0)] [] ,example-tx-futs-inside-tx]))
-  (traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-inside-tx)]))
+  ;(traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-inside-tx)]))
   (test-->> =>tf
             (term [(f       [(r_1 1) (r_0 0)] []                []  []  ,example-tx-futs-inside-tx)])
             (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] [f_new f_new1] [f_new f_new1] 3)  ; is order of τ correct?
                    (f_new1  [(r_1 1) (r_0 0)] [(r_1 2)]         []             []             2)
                    (f_new   [(r_1 1) (r_0 0)] [(r_0 1)]         []             []             1)]))
-  
+
+  ;(traces =>tf (term [(f_new ((r_new1 1) (r_new 0)) [] [] [] (let ((x (future (ref-set r_new (+ (deref r_new) 1)))) (y (future (ref-set r_new1 (+ (deref r_new1) 1))))) (+ (join x) (join y))))]))
+
   ;(traces ->tf example-tx-futs)
   (test-->> ->tf
             example-tx-futs
