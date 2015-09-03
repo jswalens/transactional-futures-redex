@@ -122,18 +122,17 @@
             (term [[(f_0 2)] []]))
   
   (define example-tx-futs-inside-tx
-    (term (let [(x (future (ref-set r_1 (+ (deref r_1) 1))))
-                (y (future (ref-set r_0 (+ (deref r_0) 1))))]
+    (term (let [(x (future (ref-set r_0 (+ (deref r_0) 1))))
+                (y (future (ref-set r_1 (+ (deref r_1) 1))))]
             (+ (join x) (join y)))))
   ;(traces ->b (term ,example-tx-futs-inside-tx))
   ;(traces =>t (term [[(r_1 1) (r_0 0)] [] ,example-tx-futs-inside-tx]))
   (traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-inside-tx)]))
   (test-->> =>tf
             (term [(f       [(r_1 1) (r_0 0)] []                []  []  ,example-tx-futs-inside-tx)])
-            (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] any any 3)
-                   (f_new1  [(r_1 1) (r_0 0)] [(r_0 1)]         any any 1)
-                   (f_new   [(r_1 1) (r_0 0)] [(r_1 2)]         any any 2)]))
-  ; TODO: add same test as above but now also testing spawned and merged lists
+            (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] [f_new f_new1] [f_new f_new1] 3)  ; is order of τ correct?
+                   (f_new1  [(r_1 1) (r_0 0)] [(r_1 2)]         []             []             2)
+                   (f_new   [(r_1 1) (r_0 0)] [(r_0 1)]         []             []             1)]))
   
   ;(traces ->tf example-tx-futs)
   (test-->> ->tf
