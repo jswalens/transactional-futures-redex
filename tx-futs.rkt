@@ -58,6 +58,15 @@
   [(member? any_x any_list)
    #false])
 
+(define-metafunction Lb
+  subset? : (any ...) (any ...) -> boolean
+  [(subset? () any)
+   #true]
+  [(subset? (any_0 any_1 ...) (any_2 ... any_0 any_3 ...))
+   (subset? (any_1 ...) (any_2 ... any_0 any_3 ...))]
+  [(subset? (any_0 any_1 ...) any)
+   #false])
+
 (module+ test
   (test-equal (term (set-add (a b c) d))
               (term (a b c d)))
@@ -70,7 +79,9 @@
   (test-equal (term (member? c (a b c)))
               (term #true))
   (test-equal (term (member? d (a b c)))
-              (term #false)))
+              (term #false))
+  (test-equal (term (subset? (a b) (a c b))) #t)
+  (test-equal (term (subset? (a d) (a c b))) #f))
 
 (define =>tf
   (reduction-relation
@@ -87,13 +98,13 @@
         "future in tx")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         [tx-task_0 ... (f σ (extend-2 τ τ_2) spawned merged_new (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
-        ; TODO: side condition spawned_2 ⊆ merged_2
-        (where #false (member? f_2 merged))
+        (where #f (member? f_2 merged))
+        (where #t (subset? spawned_2 merged_2))
         (where merged_new (set-add (set-union merged merged_2) f_2))
         "join 1")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         [tx-task_0 ... (f σ τ spawned merged (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
-        (where #true (member f_2 merged))
+        (where #t (member f_2 merged))
         "join 2")))
 
 (module+ test
@@ -112,8 +123,8 @@
         (fresh f)
         (where (any ... [tx-task_0 ... (f θ τ_1 spawned_1 merged_1 v) tx-task_2 ...] any ...)
                ,(apply-reduction-relation* =>tf (term [(f θ [] [] [] e)]))) ; note *
+        (where #t (subset? spawned_1 merged_1))
         (where θ_1 (extend-2 θ τ_1))
-        ; TODO: side condition: spawned ⊆ merged
         "atomic")))
 
 (module+ test
@@ -133,8 +144,6 @@
             (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] [f_new f_new1] [f_new f_new1] 3)  ; is order of τ correct?
                    (f_new1  [(r_1 1) (r_0 0)] [(r_1 2)]         []             []             2)
                    (f_new   [(r_1 1) (r_0 0)] [(r_0 1)]         []             []             1)]))
-
-  ;(traces =>tf (term [(f_new ((r_new1 1) (r_new 0)) [] [] [] (let ((x (future (ref-set r_new (+ (deref r_new) 1)))) (y (future (ref-set r_new1 (+ (deref r_new1) 1))))) (+ (join x) (join y))))]))
 
   ;(traces ->tf example-tx-futs)
   (test-->> ->tf
