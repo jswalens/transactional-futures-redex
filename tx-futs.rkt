@@ -46,9 +46,16 @@
   [(set-add (any_0 ...) any_1)
    (any_0 ... any_1)])
 
+(define-metafunction Lb
+  set-union : (any ...) (any ...) -> (any ...)
+  [(set-union (any_0 ...) (any_1 ...))
+   (any_0 ... any_1 ...)])
+
 (module+ test
   (test-equal (term (set-add (a b c) d))
-              (term (a b c d))))
+              (term (a b c d)))
+  (test-equal (term (set-union (a b c) (d e)))
+              (term (a b c d e))))
 
 (define =>tf
   (reduction-relation
@@ -64,9 +71,15 @@
         (fresh f_new)
         "future in tx")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
+        [tx-task_0 ... (f σ (extend-2 τ τ_2) spawned merged_new (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
+        ; TODO: side condition spawned_2 ⊆ merged_2
+        (where #false (member f_2 merged))
+        (where merged_new (set-add (set-union merged merged_2) f_2))
+        "join 1")
+   (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         [tx-task_0 ... (f σ τ spawned merged (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
-        ; TODO: join 1 tov 2 + side conditions
-        "join")))
+        (where #true (member f_2 merged))
+        "join 2")))
 
 (module+ test
   (test-equal (redex-match? Ltf tx (term [(f [] [] [] [] (+ 1 1))])) #t)
@@ -105,6 +118,7 @@
             (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] any any 3)
                    (f_new1  [(r_1 1) (r_0 0)] [(r_0 1)]         any any 1)
                    (f_new   [(r_1 1) (r_0 0)] [(r_1 2)]         any any 2)]))
+  ; TODO: add same test as above but now also testing spawned and merged lists
   
   ;(traces ->tf example-tx-futs)
   (test-->> ->tf
