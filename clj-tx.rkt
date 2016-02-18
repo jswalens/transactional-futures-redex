@@ -2,9 +2,10 @@
 
 (require redex)
 (require "clj-base.rkt")
+(require "map.rkt")
 (require "clj-futures.rkt")
 
-(provide Lt ->t =>t extend append)
+(provide Lt ->t =>t)
 
 (module+ test
   (require (submod "clj-base.rkt" test))
@@ -59,77 +60,27 @@
   
   (test-in-language? Lt example-tx-simple))
 
-; Reduction relations and stuff for language with transactions
-; TODO: extend: overwrite instead of add? This doesn't really matter
-; for the semantics, but is cleaner.
-#;(define-metafunction Lb
-  extend : ((x any) ...)  (x ...) (any ...) -> ((x any) ...)
-  [(extend ((x any) ...) (x_1 ...) (any_1 ...))
-   ((x_1 any_1) ... (x any) ...)])
-
-; Extends mapping with more bindings.
-(define-metafunction Lb
-  extend : ((any any) ...)  (any ...) (any ...) -> ((any any) ...)
-  [(extend ((any_x any_v) ...) (any_x1 ...) (any_v1 ...))
-   ((any_x1 any_v1) ... (any_x any_v) ...)])
-
-; Appends second mapping to the first. (The second one has precedence.)
-(define-metafunction Lb
-  append : ((any any) ...) ((any any) ...) -> ((any any) ...)
-  [(append (any_1 ...) (any_2 ...))
-   (any_2 ... any_1 ...)])
-
-(module+ test
-  (test-equal (term (extend ((a 0) (b 1)) (a) (55)))
-              (term ((a 55) (a 0) (b 1))))
-  (test-equal (term (extend-2 ((a 0) (b 1)) ((a 55) (c 33))))
-              (term ((a 55) (c 33) (a 0) (b 1))))) ; XXX ugly
-
-#;(define-metafunction Lb
-  lookup : ((x any) ...) x -> any
-  [(lookup ((x_1 any_1) ... (x any_t) (x_2 any_2) ...) x)
-   any_t
-   (side-condition (not (member (term x) (term (x_1 ...)))))]
-  [(lookup any_1 any_2)
-   ,(error 'lookup "not found: ~e in: ~e" (term x) (term any_2))])
-
-; Looks up a key in a mapping.
-(define-metafunction Lb
-  lookup : ((any any) ...) any -> any
-  [(lookup ((any_x1 any_v1) ... (any_x any_v) (any_x2 any_v2) ...) any_x)
-   any_v
-   (side-condition (not (member (term any_x) (term (any_x1 ...)))))]
-  [(lookup any_v1 any_v2)
-   ,(error 'lookup "not found: ~e in: ~e" (term any_x) (term any_v2))])
-
-; Checks whether a mapping contains a key.
-(define-metafunction Lb
-  contains? : ((any any) ...) any -> boolean
-  [(contains? ((any_x1 any_v1) ... (any_x any_v) (any_x2 any_v2) ...) any_x)
-   #true]
-  [(contains? any_v1 any_v2)
-   #false])
-
+; Reduction relations for language with transactions
 (define =>t
   (reduction-relation
    Lt
    #:domain tx
    (--> [θ τ (in-hole E (ref v))]
-        [θ (extend τ (r_new) (v)) (in-hole E r_new)]
+        [θ (map-set τ r_new v) (in-hole E r_new)]
         (fresh r_new)
         "ref")
    (--> [θ τ (in-hole E (deref r))]
         [θ τ (in-hole E v)]
-        (where #true (contains? τ r))
-        (where v (lookup τ r))
+        (where #true (map-contains? τ r))
+        (where v (map-get τ r))
         "deref local")
    (--> [θ τ (in-hole E (deref r))]
         [θ τ (in-hole E v)]
-        (where #false (contains? τ r))
-        (where v (lookup θ r))
+        (where #false (map-contains? τ r))
+        (where v (map-get θ r))
         "deref global")
    (--> [θ τ (in-hole E (ref-set r v))]
-        [θ (extend τ (r) (v)) (in-hole E v)]
+        [θ (map-set τ r v) (in-hole E v)]
         "ref-set")
    (--> [θ τ (in-hole E (atomic e))]
         [θ τ (in-hole E e)]
@@ -145,14 +96,14 @@
    Lt
    #:domain p
    (--> [(in-hole TASKS (ref v)) θ]
-        [(in-hole TASKS r_new) (extend θ (r_new) (v))]
+        [(in-hole TASKS r_new) (map-set θ r_new v)]
         (fresh r_new)
         "ref out tx")
    (--> [(in-hole TASKS (atomic e)) θ]
         [(in-hole TASKS v) θ_1]
         (where (any ... [θ τ_1 v] any ...)
                ,(apply-reduction-relation* =>t (term [θ () e]))) ; note *
-        (where θ_1 (append θ τ_1))
+        (where θ_1 (map-merge θ τ_1))
         ; XXX: ugly
         "atomic")))
 
