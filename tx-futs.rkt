@@ -41,16 +41,19 @@
   
   (test-in-language? Ltf example-tx-futs))
 
+; Adds element to set.
 (define-metafunction Lb
   set-add : (any ...) any -> (any ...)
   [(set-add (any_0 ...) any_1)
    (any_0 ... any_1)])
 
+; Takes the union of two sets.
 (define-metafunction Lb
   set-union : (any ...) (any ...) -> (any ...)
   [(set-union (any_0 ...) (any_1 ...))
    (any_0 ... any_1 ...)])
 
+; Checks whether an element is member of a set.
 (define-metafunction Lb
   member? : any (any ...) -> boolean
   [(member? any_x (any_0 ... any_x any_1 ...))
@@ -58,6 +61,7 @@
   [(member? any_x any_list)
    #false])
 
+; Checks whether one set is a subset of another.
 (define-metafunction Lb
   subset? : (any ...) (any ...) -> boolean
   [(subset? () any)
@@ -93,11 +97,11 @@
                ,(apply-reduction-relation =>t (term [σ τ e]))) ; no *
         "existing tx stuff")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (fork e))) tx-task_1 ...]
-        [tx-task_0 ... (f σ τ (set-add spawned f_new) merged (in-hole E f_new)) (f_new (extend-2 σ τ) [] [] merged e) tx-task_1 ...]
+        [tx-task_0 ... (f σ τ (set-add spawned f_new) merged (in-hole E f_new)) (f_new (append σ τ) [] [] merged e) tx-task_1 ...]
         (fresh f_new)
         "fork in tx")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
-        [tx-task_0 ... (f σ (extend-2 τ τ_2) spawned merged_new (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
+        [tx-task_0 ... (f σ (append τ τ_2) spawned merged_new (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         (where #f (member? f_2 merged))
         (where #t (subset? spawned_2 merged_2))
         (where merged_new (set-add (set-union merged merged_2) f_2))
@@ -123,7 +127,7 @@
         (where (any ... [(f_root θ τ_1 spawned_1 merged_1 v) tx-task_2 ...] any ...)
                ,(apply-reduction-relation* =>tf (term [(f_root θ [] [] [] e)]))) ; note *
         (where #t (subset? spawned_1 merged_1))
-        (where θ_1 (extend-2 θ τ_1))
+        (where θ_1 (append θ τ_1))
         "atomic")))
 
 (module+ test

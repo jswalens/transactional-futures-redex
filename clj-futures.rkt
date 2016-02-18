@@ -29,6 +29,7 @@
      (join E)))
 
 (module+ test
+  ; Inject expression `e` in the initial configuration.
   (define-syntax-rule (inject-Lf e)
     (term ((f_0 e))))
   
@@ -59,7 +60,7 @@
 ; Reduction relation for language with futures
 (define ->f
   (extend-reduction-relation
-   ->b
+   ->b ; congruent with Lb, because it uses the same domain (even though the domain looks different)
    Lf
    #:domain p
    (--> (task_0 ... (f_1 (in-hole E (fork e))) task_2 ...)
@@ -71,6 +72,7 @@
         "join")))
 
 (module+ test
+  ; Returns true if lists `l1` and `l2` contain the same elements.
   (define (same-elements? l1 l2)
     (set=? (list->set l1) (list->set l2)))
   

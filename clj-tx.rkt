@@ -4,7 +4,7 @@
 (require "clj-base.rkt")
 (require "clj-futures.rkt")
 
-(provide Lt ->t =>t extend extend-2)
+(provide Lt ->t =>t extend append)
 
 (module+ test
   (require (submod "clj-base.rkt" test))
@@ -40,6 +40,7 @@
   (TX ::= [θ τ E]))
 
 (module+ test
+  ; Inject expression `e` in the initial configuration.
   (define-syntax-rule (inject-Lt e)
     (term [((f_0 e)) ()]))
   
@@ -59,20 +60,23 @@
   (test-in-language? Lt example-tx-simple))
 
 ; Reduction relations and stuff for language with transactions
-; TODO: extend: overwrite instead of add?
+; TODO: extend: overwrite instead of add? This doesn't really matter
+; for the semantics, but is cleaner.
 #;(define-metafunction Lb
   extend : ((x any) ...)  (x ...) (any ...) -> ((x any) ...)
   [(extend ((x any) ...) (x_1 ...) (any_1 ...))
    ((x_1 any_1) ... (x any) ...)])
 
+; Extends mapping with more bindings.
 (define-metafunction Lb
   extend : ((any any) ...)  (any ...) (any ...) -> ((any any) ...)
   [(extend ((any_x any_v) ...) (any_x1 ...) (any_v1 ...))
    ((any_x1 any_v1) ... (any_x any_v) ...)])
 
+; Appends second mapping to the first. (The second one has precedence.)
 (define-metafunction Lb
-  extend-2 : ((any any) ...) ((any any) ...) -> ((any any) ...)
-  [(extend-2 (any_1 ...) (any_2 ...))
+  append : ((any any) ...) ((any any) ...) -> ((any any) ...)
+  [(append (any_1 ...) (any_2 ...))
    (any_2 ... any_1 ...)])
 
 (module+ test
@@ -89,6 +93,7 @@
   [(lookup any_1 any_2)
    ,(error 'lookup "not found: ~e in: ~e" (term x) (term any_2))])
 
+; Looks up a key in a mapping.
 (define-metafunction Lb
   lookup : ((any any) ...) any -> any
   [(lookup ((any_x1 any_v1) ... (any_x any_v) (any_x2 any_v2) ...) any_x)
@@ -97,6 +102,7 @@
   [(lookup any_v1 any_v2)
    ,(error 'lookup "not found: ~e in: ~e" (term any_x) (term any_v2))])
 
+; Checks whether a mapping contains a key.
 (define-metafunction Lb
   contains? : ((any any) ...) any -> boolean
   [(contains? ((any_x1 any_v1) ... (any_x any_v) (any_x2 any_v2) ...) any_x)
@@ -146,7 +152,7 @@
         [(in-hole TASKS v) θ_1]
         (where (any ... [θ τ_1 v] any ...)
                ,(apply-reduction-relation* =>t (term [θ () e]))) ; note *
-        (where θ_1 (extend-2 θ τ_1))
+        (where θ_1 (append θ τ_1))
         ; XXX: ugly
         "atomic")))
 

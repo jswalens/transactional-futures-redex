@@ -23,7 +23,7 @@
      (+ e e)
      (e e ...)
      (if e e e)
-     (let [(x e) ...] e) ; Note: not as in Clojure
+     (let [(x e) ...] e) ; Note: not as in Clojure / paper
      (do e e ...))
   (p ::= e)
   
