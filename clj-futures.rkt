@@ -27,18 +27,18 @@
      (join E)))
 
 (module+ test
-  (define-syntax-rule (make-program-f e)
+  (define-syntax-rule (inject-Lf e)
     (term ((f_0 e))))
   
   (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
   (define example-future-join
-    (make-program-f
+    (inject-Lf
      (let [(double ,example-double)
            (four (future (double 2)))]
        (join four))))
   (test-in-language? Lf example-future-join)
   (define example-future
-    (make-program-f
+    (inject-Lf
      (let [(double ,example-double)]
        (future (double 2)))))
   (test-in-language? Lf example-future)
@@ -47,7 +47,7 @@
            (f_1 (+ 2 2)))))
   (test-in-language? Lf example-join)
   (define example-two-futures
-    (make-program-f
+    (inject-Lf
      (let [(double ,example-double)
            (four (future (double 2)))
            (eight (future (double 4)))]

@@ -40,8 +40,7 @@
   (TX ::= [θ τ E]))
 
 (module+ test
-  ; TODO: rename to "inject"
-  (define-syntax-rule (make-program-t e)
+  (define-syntax-rule (inject-Lt e)
     (term [((f_0 e)) ()]))
   
   (define example-tx-simple-tx
@@ -50,7 +49,7 @@
             (ref-set b (+ (deref b) 1))
             (+ (deref a) (deref b)))))
   (define example-tx-simple
-    (make-program-t
+    (inject-Lt
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
@@ -156,7 +155,7 @@
 
 (module+ test
   ; ref outside tx
-  ;(traces ->t (make-program-t (ref 0)))
+  ;(traces ->t (inject-Lt (ref 0)))
   (test-->> ->t
             (term [((f_0 (ref 0))) ()])
             (term [((f_0 r_new)) ((r_new 0))]))

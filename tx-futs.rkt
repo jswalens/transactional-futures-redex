@@ -31,7 +31,7 @@
 
 (module+ test
   (define example-tx-futs
-    (make-program-t
+    (inject-Lt
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
@@ -128,7 +128,7 @@
 
 (module+ test
   (test-->> ->tf
-            (make-program-t (let [(a 1)] (+ a a)))
+            (inject-Lt (let [(a 1)] (+ a a)))
             (term [[(f_0 2)] []]))
   
   (define example-tx-futs-inside-tx
