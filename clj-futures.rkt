@@ -9,12 +9,14 @@
   (require (submod "clj-base.rkt" test))
   (provide (all-defined-out)))
 
+; Language with futures, extends base language.
+; See Figure 1 in the paper.
 (define-extended-language Lf Lb
   (f ::= variable-not-otherwise-mentioned)
   (v ::= ....
      f)
   (e ::= ....
-     (future e)
+     (fork e)
      (join e))
   (task ::= (f e))
   (tasks ::= (task ...)) ; map f → e
@@ -30,29 +32,29 @@
   (define-syntax-rule (inject-Lf e)
     (term ((f_0 e))))
   
-  (test-in-language? Lf (term ((f_0 (future (+ 1 2))))))
-  (define example-future-join
+  (test-in-language? Lf (term ((f_0 (fork (+ 1 2))))))
+  (define example-fork-join
     (inject-Lf
      (let [(double ,example-double)
-           (four (future (double 2)))]
+           (four (fork (double 2)))]
        (join four))))
-  (test-in-language? Lf example-future-join)
-  (define example-future
+  (test-in-language? Lf example-fork-join)
+  (define example-fork
     (inject-Lf
      (let [(double ,example-double)]
-       (future (double 2)))))
-  (test-in-language? Lf example-future)
+       (fork (double 2)))))
+  (test-in-language? Lf example-fork)
   (define example-join
     (term ((f_0 (join f_1))
            (f_1 (+ 2 2)))))
   (test-in-language? Lf example-join)
-  (define example-two-futures
+  (define example-two-forks
     (inject-Lf
      (let [(double ,example-double)
-           (four (future (double 2)))
-           (eight (future (double 4)))]
+           (four (fork (double 2)))
+           (eight (fork (double 4)))]
        (+ (join four) (join eight)))))
-  (test-in-language? Lf example-two-futures))
+  (test-in-language? Lf example-two-forks))
 
 ; Reduction relation for language with futures
 (define ->f
@@ -60,10 +62,10 @@
    ->b
    Lf
    #:domain p
-   (--> (task_0 ... (f_1 (in-hole E (future e))) task_2 ...)
+   (--> (task_0 ... (f_1 (in-hole E (fork e))) task_2 ...)
         (task_0 ... (f_1 (in-hole E f_new)) (f_new e) task_2 ...)
         (fresh f_new)
-        "future")
+        "fork")
    (--> (task_0 ... (f_1 (in-hole E (join f_3))) task_2 ... (f_3 v_3) task_4 ...)
         (task_0 ... (f_1 (in-hole E v_3)) task_2 ... (f_3 v_3) task_4 ...)
         "join")))
@@ -72,25 +74,25 @@
   (define (same-elements? l1 l2)
     (set=? (list->set l1) (list->set l2)))
   
-  #;(traces ->f example-future-join)
+  #;(traces ->f example-fork-join)
   (test-->> ->f
             #:equiv same-elements?
-            example-future-join
+            example-fork-join
             (term ((f_0 4) (f_new 4))))
-  #;(traces ->f example-future)
+  #;(traces ->f example-fork)
   (test-->> ->f
             #:equiv same-elements?
-            example-future
+            example-fork
             (term ((f_0 f_new) (f_new 4))))
   #;(traces ->f example-join)
   (test-->> ->f
             #:equiv same-elements?
             example-join
             (term ((f_0 4) (f_1 4))))
-  #;(traces ->f example-two-futures)
+  #;(traces ->f example-two-forks)
   (test-->> ->f
             #:equiv same-elements?
-            example-two-futures
+            example-two-forks
             (term ((f_0 12) (f_new 4) (f_new1 8)))))
 
 (module+ test

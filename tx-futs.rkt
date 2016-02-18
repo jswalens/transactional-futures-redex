@@ -35,8 +35,8 @@
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
-        (let [(x (future (ref-set a (+ (deref a) 1))))
-              (y (future (ref-set b (+ (deref b) 1))))]
+        (let [(x (fork (ref-set a (+ (deref a) 1))))
+              (y (fork (ref-set b (+ (deref b) 1))))]
           (+ (join x) (join y)))))))
   
   (test-in-language? Ltf example-tx-futs))
@@ -92,10 +92,10 @@
         (where (any ... [σ τ_1 e_1] any ...)
                ,(apply-reduction-relation =>t (term [σ τ e]))) ; no *
         "existing tx stuff")
-   (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (future e))) tx-task_1 ...]
+   (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (fork e))) tx-task_1 ...]
         [tx-task_0 ... (f σ τ (set-add spawned f_new) merged (in-hole E f_new)) (f_new (extend-2 σ τ) [] [] merged e) tx-task_1 ...]
         (fresh f_new)
-        "future in tx")
+        "fork in tx")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (join f_2))) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         [tx-task_0 ... (f σ (extend-2 τ τ_2) spawned merged_new (in-hole E v_2)) tx-task_1 ... (f_2 σ_2 τ_2 spawned_2 merged_2 v_2) tx-task_3 ...]
         (where #f (member? f_2 merged))
@@ -132,8 +132,8 @@
             (term [[(f_0 2)] []]))
   
   (define example-tx-futs-inside-tx
-    (term (let [(x (future (ref-set r_0 (+ (deref r_0) 1))))
-                (y (future (ref-set r_1 (+ (deref r_1) 1))))]
+    (term (let [(x (fork (ref-set r_0 (+ (deref r_0) 1))))
+                (y (fork (ref-set r_1 (+ (deref r_1) 1))))]
             (+ (join x) (join y)))))
   ;(traces ->b (term ,example-tx-futs-inside-tx))
   ;(traces =>t (term [[(r_1 1) (r_0 0)] [] ,example-tx-futs-inside-tx]))

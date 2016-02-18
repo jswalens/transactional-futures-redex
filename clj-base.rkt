@@ -8,6 +8,7 @@
   (provide (all-defined-out)))
 
 ; Base language
+; (Figure 1 of paper, but without futures)
 (define-language Lb
   (c ::= number
      bool
@@ -21,9 +22,9 @@
   (e ::= v
      (+ e e)
      (e e ...)
+     (if e e e)
      (let [(x e) ...] e) ; Note: not as in Clojure
-     (do e e ...)
-     (if e e e))
+     (do e e ...))
   (p ::= e)
   
   (P ::= E)
@@ -31,14 +32,16 @@
      (+ E e)
      (+ v E)
      (v ... E e ...)
+     (if E e e)
      (let [(x E) (x e) ...] e)
-     (do v ... E e ...)
-     (if E e e)))
+     (do v ... E e ...)))
 
 (module+ test
+  ; Tests whether term `t` is in language `l`.
   (define-syntax-rule (test-in-language? l t)
     (test-equal (redex-match? l p t) #t))
-  
+
+  ; Some example programs.
   (define example-double
     (term (fn [x] (+ x x))))
   (define example-doubling
@@ -53,18 +56,15 @@
                     "nothing"
                   (+ x y))
                 "error"))))
-  
+
+  ; Test whether examples are in languages.
   (test-in-language? Lb (term 1))
   (test-in-language? Lb example-double)
   (test-in-language? Lb example-doubling)
   (test-in-language? Lb example-sum-3)
   (test-in-language? Lb example-base-language))
 
-; Is it a variable (in the base language)?
-(define x?
-  (redex-match Lb x))
-
-; Substitution
+; Substitute variables with their value in an expression.
 (define-metafunction Lb
   subst : ((any x) ...) any -> any
   [(subst [(any_1 x_1) ... (any_x x) (any_2 x_2) ...] x) any_x]
