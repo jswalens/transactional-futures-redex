@@ -13,6 +13,7 @@
   (provide (all-defined-out)))
 
 ; Language with transactions
+; Figure 2 in the paper.
 (define-extended-language Lt Lf
   (r ::= variable-not-otherwise-mentioned)
   (v ::= ....
@@ -22,7 +23,7 @@
      (deref e)
      (ref-set e e)
      (atomic e)
-     (retry))
+     (retry)) ; retry not in paper
   (θ ::= [(r v) ...])
   (τ ::= [(r v) ...])
   (p ::= [tasks θ]) ; program = list of tasks + heap
@@ -44,8 +45,9 @@
   ; Inject expression `e` in the initial configuration.
   (define-syntax-rule (inject-Lt e)
     (term [((f_0 e)) ()]))
-  
-  (define example-tx-simple-tx
+
+  ; Some programs with transactions
+  (define example-tx-in-tx ; the inside of a transaction
     (term (do
               (ref-set a (+ (deref a) 1))
             (ref-set b (+ (deref b) 1))
@@ -55,12 +57,20 @@
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
-        ,example-tx-simple-tx))))
-  ; TODO: example with > 1 tx
+        ,example-tx-in-tx))))
+  (define example-tx-two-tx
+    (inject-Lt
+     (let [(a (ref 0))
+           (b (ref 1))]
+       (do
+           (atomic ,example-tx-in-tx)
+         (atomic ,example-tx-in-tx)))))
   
-  (test-in-language? Lt example-tx-simple))
+  (test-in-language? Lt example-tx-simple)
+  (test-in-language? Lt example-tx-two-tx))
 
-; Reduction relations for language with transactions
+; Reduction relations ->t and =>t for language with transactions
+; Figure 2 of paper.
 (define =>t
   (reduction-relation
    Lt
@@ -73,6 +83,7 @@
         [θ τ (in-hole E v)]
         (where #true (map-contains? τ r))
         (where v (map-get τ r))
+        ; Unlike the paper, we split up deref into local and global, because it's easier
         "deref local")
    (--> [θ τ (in-hole E (deref r))]
         [θ τ (in-hole E v)]
@@ -98,13 +109,14 @@
    (--> [(in-hole TASKS (ref v)) θ]
         [(in-hole TASKS r_new) (map-set θ r_new v)]
         (fresh r_new)
+        ; not allowed in the paper, but allowed in Clojure
         "ref out tx")
    (--> [(in-hole TASKS (atomic e)) θ]
         [(in-hole TASKS v) θ_1]
         (where (any ... [θ τ_1 v] any ...)
                ,(apply-reduction-relation* =>t (term [θ () e]))) ; note *
         (where θ_1 (map-merge θ τ_1))
-        ; XXX: ugly
+        ; This unfortunately breaks PLT Redex's traces...
         "atomic")))
 
 ; Note: if there's no *, we need to use (in-hole E e) -> (in-hole E e_1), if there is a * we should not.
@@ -112,7 +124,7 @@
 
 (module+ test
   ; ref outside tx
-  ;(traces ->t (inject-Lt (ref 0)))
+  #;(traces ->t (inject-Lt (ref 0)))
   (test-->> ->t
             (term [((f_0 (ref 0))) ()])
             (term [((f_0 r_new)) ((r_new 0))]))
@@ -139,9 +151,9 @@
            (term [((f_0 2)) ()]))
   
   ; in a tx
-  ;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
+  #;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
   (test-->> =>t
-            (term [((a 0) (b 1)) () ,example-tx-simple-tx])
+            (term [((a 0) (b 1)) () ,example-tx-in-tx])
             (term [((a 0) (b 1)) ((b 2) (a 1)) 3]))
 
   ; atomic
@@ -158,11 +170,19 @@
             (term [((f_0 (atomic (ref-set a (+ (deref a) (+ 1 2)))))) ((a 0))])
             (term [((f_0 3)) ((a 3) (a 0))]))
 
-  ; complete example: seems to work
+  ; full example programs
   #;(traces ->t example-tx-simple)
   (test-->> ->t
             example-tx-simple
-            (term [((f_0 3)) ((r_new1 2) (r_new 1) (r_new1 1) (r_new 0))])))
+            (term [((f_0 3))
+                   ((r_new1 2) (r_new 1) (r_new1 1) (r_new 0))]))
+
+  #;(traces ->t example-tx-two-tx)
+  (test-->> ->t
+            example-tx-two-tx
+            (term [((f_0 5))
+                   ; a = r_new; b = r_new1
+                   ((r_new1 3) (r_new 2) (r_new1 2) (r_new 1) (r_new1 1) (r_new 0))])))
 
 (module+ test
   (test-results))
