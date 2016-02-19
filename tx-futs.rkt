@@ -16,10 +16,11 @@
   (provide (all-defined-out)))
 
 ; Language with transactions
+; Figure 5 in paper.
 (define-extended-language Ltf Lt
   (σ ::= [(r v) ...])
-  (spawned ::= [f ...]) ; ordered
-  (merged  ::= [f ...]) ; unordered
+  (spawned ::= [f ...])
+  (merged  ::= [f ...])
   (tx-task ::= (f σ τ spawned merged e))
   (tx      ::= [tx-task ...])
   
@@ -32,17 +33,23 @@
   (TX-TASK ::= (f σ τ spawned merged E)))
 
 (module+ test
-  (define example-tx-futs
+  (define example-tx-futs-1-body
+    (term (let [(x (fork (ref-set r_0 (+ (deref r_0) 1))))
+                (y (fork (ref-set r_1 (+ (deref r_1) 1))))]
+            (+ (join x) (join y)))))
+  (define example-tx-futs-1
     (inject-Lt
-     (let [(a (ref 0))
-           (b (ref 1))]
+     (let [(r_0 (ref 0))
+           (r_1 (ref 1))]
        (atomic
-        (let [(x (fork (ref-set a (+ (deref a) 1))))
-              (y (fork (ref-set b (+ (deref b) 1))))]
-          (+ (join x) (join y)))))))
-  
-  (test-in-language? Ltf example-tx-futs))
+        ,example-tx-futs-1-body))))
 
+  (test-in-language? Ltf example-tx-futs-1)
+  ; TODO: add more example programs
+  )
+
+; Reduction relation in transaction.
+; Figure 5 in paper.
 (define =>tf
   (reduction-relation
    Ltf
@@ -51,7 +58,7 @@
         [tx-task_0 ... (f σ τ_1 spawned merged (in-hole E e_1)) tx-task_1 ...]
         (where (any ... [σ τ_1 e_1] any ...)
                ,(apply-reduction-relation =>t (term [σ τ e]))) ; no *
-        "existing tx stuff")
+        "regular tx step")
    (--> [tx-task_0 ... (f σ τ spawned merged (in-hole E (fork e))) tx-task_1 ...]
         [tx-task_0 ... (f σ τ (set-add spawned f_new) merged (in-hole E f_new)) (f_new (map-merge σ τ) [] [] merged e) tx-task_1 ...]
         (fresh f_new)
@@ -67,15 +74,11 @@
         (where #t (member f_2 merged))
         "join 2")))
 
-(module+ test
-  (test-equal (redex-match? Ltf tx (term [(f [] [] [] [] (+ 1 1))])) #t)
-  (test-->> =>tf
-            (term [(f [] [] [] [] (+ 1 1))])
-            (term [(f [] [] [] [] 2)])))
-
+; Reduction relation out transaction.
+; Figure 5 in paper.
 (define ->tf
   (extend-reduction-relation
-   ->t
+   ->t ; We can extend the existing relation, as the domain in the same.
    Ltf
    #:domain p
    (--> [(in-hole TASKS (atomic e)) θ]
@@ -87,24 +90,29 @@
         "atomic")))
 
 (module+ test
+  ; In tx: test =>tf
+  (test-equal (redex-match? Ltf tx (term [(f [] [] [] [] (+ 1 1))])) #t)
+  (test-->> =>tf
+            (term [(f [] [] [] [] (+ 1 1))])
+            (term [(f [] [] [] [] 2)]))
+
+  ; Out tx: test ->tf
+  ; Examples from base language
   (test-->> ->tf
             (inject-Lt (let [(a 1)] (+ a a)))
             (term [[(f_0 2)] []]))
-  
-  (define example-tx-futs-inside-tx
-    (term (let [(x (fork (ref-set r_0 (+ (deref r_0) 1))))
-                (y (fork (ref-set r_1 (+ (deref r_1) 1))))]
-            (+ (join x) (join y)))))
-  ;(traces ->b (term ,example-tx-futs-inside-tx))
-  ;(traces =>t (term [[(r_1 1) (r_0 0)] [] ,example-tx-futs-inside-tx]))
-  ;(traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-inside-tx)]))
+  (test-->> ->tf (inject-Lt ,example-doubling) (term [((f_0 4)) ()]))
+  (test-->> ->tf (inject-Lt ,example-sum-3) (term [((f_0 6)) ()]))
+  (test-->> ->tf (inject-Lt ,example-base-language) (term [((f_0 9)) ()]))
+
+  ; Examples with transactional futures
+  #;(traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-1-body)]))
+  #;(traces ->tf example-tx-futs-1)
   (test-->> =>tf
-            (term [(f       [(r_1 1) (r_0 0)] []                []  []  ,example-tx-futs-inside-tx)])
+            (term [(f       [(r_1 1) (r_0 0)] []                []  []  ,example-tx-futs-1-body)])
             (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] [f_new f_new1] [f_new f_new1] 3)  ; is order of τ correct?
                    (f_new1  [(r_1 1) (r_0 0)] [(r_1 2)]         []             []             2)
                    (f_new   [(r_1 1) (r_0 0)] [(r_0 1)]         []             []             1)]))
-
-  (traces ->tf example-tx-futs)
   (test-->> ->tf
-            example-tx-futs
+            example-tx-futs-1
             (term [[(f_0 3)] [(r_new1 2) (r_new 1) (r_new1 1) (r_new 0)]])))
