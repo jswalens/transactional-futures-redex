@@ -20,7 +20,7 @@
      x
      (fn [x ...] e))
   (e ::= v
-     (+ e e)
+     (+ e e) ; Note: we only have +, other operations are similar.
      (e e ...)
      (if e e e)
      (let [(x e) ...] e) ; Note: not as in Clojure / paper
@@ -88,6 +88,7 @@
   [(subst-raw [(any_1 x_1) ... ] any_*) any_*])
 
 ; Reduction relation for base language
+; Elided from paper.
 (define ->b
   (reduction-relation
    Lb
@@ -115,6 +116,7 @@
         "if_false")))
 
 (module+ test
+  ; Test ->b
   #;(traces ->b example-doubling)
   (test-->> ->b example-doubling (term 4))
   (test-->> ->b example-sum-3 (term 6))

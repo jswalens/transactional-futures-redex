@@ -32,7 +32,8 @@
   ; Inject expression `e` in the initial configuration.
   (define-syntax-rule (inject-Lf e)
     (term ((f_0 e))))
-  
+
+  ; Define examples and test whether they're in the language.
   (test-in-language? Lf (term ((f_0 (fork (+ 1 2))))))
   (define example-fork-join
     (inject-Lf
@@ -58,6 +59,7 @@
   (test-in-language? Lf example-two-forks))
 
 ; Reduction relation for language with futures
+; Figure 1 in the paper.
 (define ->f
   (extend-reduction-relation
    ->b ; congruent with Lb, because it uses the same domain (even though the domain looks different)
@@ -75,7 +77,8 @@
   ; Returns true if lists `l1` and `l2` contain the same elements.
   (define (same-elements? l1 l2)
     (set=? (list->set l1) (list->set l2)))
-  
+
+  ; Test ->f
   #;(traces ->f example-fork-join)
   (test-->> ->f
             #:equiv same-elements?
