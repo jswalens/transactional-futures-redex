@@ -69,19 +69,28 @@
     (inject-Lt
      (fork (atomic (+ 1 2)))))
   (define example-tx-two-par-tx
-    ; deterministic
+    ; determinate: order of tx's not defined, but result will always be the same
     (inject-Lt
      (let [(a (ref 0))
            (b (ref 1))
            (f (fork (atomic ,example-tx-body)))
            (g (fork (atomic ,example-tx-body)))]
        (+ (join f) (join g)))))
-  ; TODO: add non-deterministic example
+  (define example-tx-non-det
+    ; non-determinate: different results possible
+    (inject-Lt
+     (let [(a (ref 0))
+           (f (fork (atomic (ref-set a 1))))
+           (g (fork (atomic (ref-set a 2))))]
+       (do (join f)
+         (join g)
+         (atomic (deref a))))))
   
   (test-in-language? Lt example-tx-simple)
   (test-in-language? Lt example-tx-two-seq-tx)
   (test-in-language? Lt example-tx-tx-in-fork)
-  (test-in-language? Lt example-tx-two-par-tx))
+  (test-in-language? Lt example-tx-two-par-tx)
+  (test-in-language? Lt example-tx-non-det))
 
 ; Reduction relations ->t and =>t for language with transactions
 ; Figure 2 of paper.
@@ -115,6 +124,7 @@
         (where (e_0 ... e_1 e_2 ...) ,(apply-reduction-relation ->b (term e))) ; no *
         "base language in tx")))
 
+; Also Figure 2 of paper.
 (define ->t
   (extend-reduction-relation
    ->b ; we extend the base language, as ->f has a different domain
@@ -215,7 +225,9 @@
             example-tx-tx-in-fork
             (term [((f_0 f_new) (f_new 3)) ()]))
 
-  ; There are two possible outcomes: tx 1 executes first or tx 2 first
+  ; There are two schedules: tx 1 executes first or tx 2 first.
+  ; The end result is the same, f_0 = 8, but the results of f_new and f_new1
+  ; are different.
   #;(traces ->t example-tx-two-par-tx)
   (test-->>∃ ->t
              example-tx-two-par-tx
@@ -238,6 +250,27 @@
                      (r_new1 2)
                      (r_new 1)
                      (r_new1 1)
+                     (r_new 0))]))
+
+  ; There are two possible schedules.
+  ; If tx 1 executes first, then tx 2, the result is 2;
+  ; if tx 2 executes first, then tx 1, the result is 1.
+  #;(traces ->t example-tx-non-det)
+  (test-->>∃ ->t
+             example-tx-non-det
+             (term [((f_0 1)
+                     (f_new1 2)
+                     (f_new 1))
+                    ((r_new 1)
+                     (r_new 2)
+                     (r_new 0))]))
+  (test-->>∃ ->t
+             example-tx-non-det
+             (term [((f_0 2)
+                     (f_new1 2)
+                     (f_new 1))
+                    ((r_new 2)
+                     (r_new 1)
                      (r_new 0))])))
 
 (module+ test
