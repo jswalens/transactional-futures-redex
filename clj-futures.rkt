@@ -61,10 +61,33 @@
 ; Reduction relation for language with futures
 ; Figure 1 in the paper.
 (define ->f
-  (extend-reduction-relation
-   ->b ; congruent with Lb, because it uses the same domain (even though the domain looks different)
+  (reduction-relation
    Lf
    #:domain p
+   ; Copied from base language
+   ; We cannot use extend-reduction-relation as the domain looks different.
+   (--> (in-hole P (+ number ...))
+        (in-hole P ,(apply + (term (number ...))))
+        "+")
+   (--> (in-hole P ((fn [x_1 ..._n] e) v_1 ..._n))
+        (in-hole P (subst [(v_1 x_1) ...] e))
+        "β: function application")
+   (--> (in-hole P (let [(x_0 v_0) (x_1 e_1) ...] e))
+        (in-hole P (let [(x_1 (subst [(v_0 x_0)] e_1)) ...] (subst [(v_0 x_0)] e)))
+        "let 1")
+   (--> (in-hole P (let [] e))
+        (in-hole P e)
+        "let 0")
+   (--> (in-hole P (do v_0 ... v_n))
+        (in-hole P v_n)
+        "do")
+   (--> (in-hole P (if true e_1 e_2))
+        (in-hole P e_1)
+        "if_true")
+   (--> (in-hole P (if false e_1 e_2))
+        (in-hole P e_2)
+        "if_false")
+   ; New:
    (--> (task_0 ... (f_1 (in-hole E (fork e))) task_2 ...)
         (task_0 ... (f_1 (in-hole E f_new)) (f_new e) task_2 ...)
         (fresh f_new)
@@ -79,6 +102,11 @@
     (set=? (list->set l1) (list->set l2)))
 
   ; Test ->f
+  ; Examples from base language
+  (test-->> ->f (inject-Lf ,example-doubling) (term ((f_0 4))))
+  (test-->> ->f (inject-Lf ,example-sum-3) (term ((f_0 6))))
+  (test-->> ->f (inject-Lf ,example-base-language) (term ((f_0 9))))
+
   #;(traces ->f example-fork-join)
   (test-->> ->f
             #:equiv same-elements?

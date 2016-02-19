@@ -47,7 +47,8 @@
     (term [((f_0 e)) ()]))
 
   ; Some programs with transactions
-  (define example-tx-in-tx ; the inside of a transaction
+  (define example-tx-body
+    ; the body of a transaction, reused in different tests
     (term (do
               (ref-set a (+ (deref a) 1))
             (ref-set b (+ (deref b) 1))
@@ -57,17 +58,30 @@
      (let [(a (ref 0))
            (b (ref 1))]
        (atomic
-        ,example-tx-in-tx))))
-  (define example-tx-two-tx
+        ,example-tx-body))))
+  (define example-tx-two-seq-tx
     (inject-Lt
      (let [(a (ref 0))
            (b (ref 1))]
-       (do
-           (atomic ,example-tx-in-tx)
-         (atomic ,example-tx-in-tx)))))
+       (do (atomic ,example-tx-body)
+         (atomic ,example-tx-body)))))
+  (define example-tx-tx-in-fork
+    (inject-Lt
+     (fork (atomic (+ 1 2)))))
+  (define example-tx-two-par-tx
+    ; deterministic
+    (inject-Lt
+     (let [(a (ref 0))
+           (b (ref 1))
+           (f (fork (atomic ,example-tx-body)))
+           (g (fork (atomic ,example-tx-body)))]
+       (+ (join f) (join g)))))
+  ; TODO: add non-deterministic example
   
   (test-in-language? Lt example-tx-simple)
-  (test-in-language? Lt example-tx-two-tx))
+  (test-in-language? Lt example-tx-two-seq-tx)
+  (test-in-language? Lt example-tx-tx-in-fork)
+  (test-in-language? Lt example-tx-two-par-tx))
 
 ; Reduction relations ->t and =>t for language with transactions
 ; Figure 2 of paper.
@@ -103,9 +117,18 @@
 
 (define ->t
   (extend-reduction-relation
-   ->f
+   ->b ; we extend the base language, as ->f has a different domain
    Lt
    #:domain p
+   ; Copied from ->f, but domain modified:
+   (--> [(task_0 ... (f_1 (in-hole E (fork e))) task_2 ...) θ]
+        [(task_0 ... (f_1 (in-hole E f_new)) (f_new e) task_2 ...) θ]
+        (fresh f_new)
+        "fork")
+   (--> [(task_0 ... (f_1 (in-hole E (join f_3))) task_2 ... (f_3 v_3) task_4 ...) θ]
+        [(task_0 ... (f_1 (in-hole E v_3)) task_2 ... (f_3 v_3) task_4 ...) θ]
+        "join")
+   ; New:
    (--> [(in-hole TASKS (ref v)) θ]
         [(in-hole TASKS r_new) (map-set θ r_new v)]
         (fresh r_new)
@@ -118,9 +141,6 @@
         (where θ_1 (map-merge θ τ_1))
         ; This unfortunately breaks PLT Redex's traces...
         "atomic")))
-
-; Note: if there's no *, we need to use (in-hole E e) -> (in-hole E e_1), if there is a * we should not.
-; Exercise for the reader: why?
 
 (module+ test
   ; ref outside tx
@@ -147,13 +167,19 @@
 
   ; just base language (outside tx)
   (test-->> ->t
-           (term [((f_0 (let [(a 1)] (+ a a)))) ()])
-           (term [((f_0 2)) ()]))
+           (inject-Lt ,example-doubling)
+           (term [((f_0 4)) ()]))
+  (test-->> ->t
+           (inject-Lt ,example-sum-3)
+           (term [((f_0 6)) ()]))
+  (test-->> ->t
+           (inject-Lt ,example-base-language)
+           (term [((f_0 9)) ()]))
   
   ; in a tx
   #;(traces =>t (term [((a 0) (b 1)) () ,example-tx-simple-tx]))
   (test-->> =>t
-            (term [((a 0) (b 1)) () ,example-tx-in-tx])
+            (term [((a 0) (b 1)) () ,example-tx-body])
             (term [((a 0) (b 1)) ((b 2) (a 1)) 3]))
 
   ; atomic
@@ -177,12 +203,42 @@
             (term [((f_0 3))
                    ((r_new1 2) (r_new 1) (r_new1 1) (r_new 0))]))
 
-  #;(traces ->t example-tx-two-tx)
+  #;(traces ->t example-tx-two-seq-tx)
   (test-->> ->t
-            example-tx-two-tx
+            example-tx-two-seq-tx
             (term [((f_0 5))
                    ; a = r_new; b = r_new1
-                   ((r_new1 3) (r_new 2) (r_new1 2) (r_new 1) (r_new1 1) (r_new 0))])))
+                   ((r_new1 3) (r_new 2) (r_new1 2) (r_new 1) (r_new1 1) (r_new 0))]))
+
+  #;(traces ->t example-tx-tx-in-fork)
+  (test-->> ->t
+            example-tx-tx-in-fork
+            (term [((f_0 f_new) (f_new 3)) ()]))
+
+  ; There are two possible outcomes: tx 1 executes first or tx 2 first
+  #;(traces ->t example-tx-two-par-tx)
+  (test-->>∃ ->t
+             example-tx-two-par-tx
+             (term [((f_0 8)
+                     (f_new1 3)
+                     (f_new 5))
+                    ((r_new1 3)
+                     (r_new 2)
+                     (r_new1 2)
+                     (r_new 1)
+                     (r_new1 1)
+                     (r_new 0))]))
+  (test-->>∃ ->t
+             example-tx-two-par-tx
+             (term [((f_0 8)
+                     (f_new1 5)
+                     (f_new 3))
+                    ((r_new1 3)
+                     (r_new 2)
+                     (r_new1 2)
+                     (r_new 1)
+                     (r_new1 1)
+                     (r_new 0))])))
 
 (module+ test
   (test-results))

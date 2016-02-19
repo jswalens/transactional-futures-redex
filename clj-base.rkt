@@ -2,7 +2,7 @@
 
 (require redex)
 
-(provide Lb ->b)
+(provide Lb ->b subst subst-raw)
 
 (module+ test
   (provide (all-defined-out)))
