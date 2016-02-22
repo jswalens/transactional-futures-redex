@@ -75,7 +75,6 @@
                       (join y)   ; => r_0 = original + 4
                       (deref r_0))))))] ; => returns original + 4
        (+ (join f_0) (join f_1))))) ; = either (0+2)+(2+4)=8 or (0+4)+(4+2)=10
-  ; TODO: maybe add examples from unit tests for Clojure implementation?
   
   (test-in-language? Ltf example-tx-futs-1)
   (test-in-language? Ltf example-tx-futs-2)
