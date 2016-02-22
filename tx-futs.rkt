@@ -33,6 +33,7 @@
   (TX-TASK ::= (f σ τ spawned merged E)))
 
 (module+ test
+  ; One transaction, no conflicts
   (define example-tx-futs-1-body
     (term (let [(x (fork (ref-set r_0 (+ (deref r_0) 1))))
                 (y (fork (ref-set r_1 (+ (deref r_1) 1))))]
@@ -44,9 +45,41 @@
        (atomic
         ,example-tx-futs-1-body))))
 
+  ; One transaction, with a conflict
+  (define example-tx-futs-2
+    (inject-Lt
+     (let [(r_0 (ref 0))]
+       (atomic
+        (let [(x (fork (ref-set r_0 (+ (deref r_0) 1))))
+                (y (fork (ref-set r_0 (+ (deref r_0) 2))))]
+            (do (join x)
+              (join y)
+              (deref r_0)))))))
+
+  ; Two transactions, with conflict in tx
+  (define example-tx-futs-3
+    (inject-Lt
+     (let [(r_0 (ref 0))
+           (f_0 (fork
+                 (atomic
+                  (let [(x (fork (ref-set r_0 (+ (deref r_0) 1))))
+                        (y (fork (ref-set r_0 (+ (deref r_0) 2))))]
+                    (do (join x) ; => r_0 = original + 1
+                      (join y)   ; => r_0 = original + 2
+                      (deref r_0)))))) ; => returns original + 2
+           (f_1 (fork
+                 (atomic
+                  (let [(x (fork (ref-set r_0 (+ (deref r_0) 3))))
+                        (y (fork (ref-set r_0 (+ (deref r_0) 4))))]
+                    (do (join x) ; => r_0 = original + 3
+                      (join y)   ; => r_0 = original + 4
+                      (deref r_0))))))] ; => returns original + 4
+       (+ (join f_0) (join f_1))))) ; = either (0+2)+(2+4)=8 or (0+4)+(4+2)=10
+  ; TODO: maybe add examples from unit tests for Clojure implementation?
+  
   (test-in-language? Ltf example-tx-futs-1)
-  ; TODO: add more example programs
-  )
+  (test-in-language? Ltf example-tx-futs-2)
+  (test-in-language? Ltf example-tx-futs-3))
 
 ; Reduction relation in transaction.
 ; Figure 5 in paper.
@@ -108,11 +141,47 @@
   ; Examples with transactional futures
   #;(traces =>tf (term [(f [(r_1 1) (r_0 0)] [] [] [] ,example-tx-futs-1-body)]))
   #;(traces ->tf example-tx-futs-1)
-  (test-->> =>tf
+  ; Passes, takes about 6 seconds
+  #;(test-->> =>tf
             (term [(f       [(r_1 1) (r_0 0)] []                []  []  ,example-tx-futs-1-body)])
             (term [(f       [(r_1 1) (r_0 0)] [(r_1 2) (r_0 1)] [f_new f_new1] [f_new f_new1] 3)  ; is order of τ correct?
                    (f_new1  [(r_1 1) (r_0 0)] [(r_1 2)]         []             []             2)
                    (f_new   [(r_1 1) (r_0 0)] [(r_0 1)]         []             []             1)]))
-  (test-->> ->tf
+  ; Passes, takes about 6 seconds
+  #;(test-->> ->tf
             example-tx-futs-1
-            (term [[(f_0 3)] [(r_new1 2) (r_new 1) (r_new1 1) (r_new 0)]])))
+            (term [[(f_0 3)] [(r_new1 2) (r_new 1) (r_new1 1) (r_new 0)]]))
+
+  ; Passes, takes about 6 seconds
+  #;(test-->> ->tf
+            example-tx-futs-2
+            (term [[(f_0 2)] [(r_new 2) (r_new 1) (r_new 0)]]))
+
+  ; Passes, but takes several minutes
+  #;(test-->>∃ ->tf
+             example-tx-futs-3
+             (term [[(f_0 8) (f_new1 6) (f_new 2)]
+                    [(r_new 6) (r_new 5) (r_new 2) (r_new 1) (r_new 0)]]))
+  ; Tx 1 first, then 2:
+  ; * r_new starts as 0
+  ; * tx 1's x writes 0+1=1
+  ; * tx 1's y writes 0+2=2
+  ; * tx 1 returns 2         -> f_new
+  ; * tx 2's x writes 2+3=5
+  ; * tx 2's y writes 2+4=6
+  ; * tx 2 returns 6         -> f_new1
+  ; * program returns 2+6=8  -> f_0
+  #;(test-->>∃ ->tf
+             example-tx-futs-3
+             (term [[(f_0 10) (f_new1 4) (f_new 6)]
+                    [(r_new 6) (r_new 5) (r_new 4) (r_new 3) (r_new 0)]]))
+  ; Tx 2 first, then 1:
+  ; * r_new starts as 0
+  ; * tx 2's x writes 0+3=3
+  ; * tx 2's y writes 0+4=4
+  ; * tx 2 returns 4         -> f_new1
+  ; * tx 1's x writes 4+1=5
+  ; * tx 1's y writes 4+1=6
+  ; * tx 1 returns 6         -> f_new
+  ; * program returns 4+6=10 -> f_0
+  (print "done"))
