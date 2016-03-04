@@ -183,4 +183,5 @@
   ; * tx 1's y writes 4+1=6
   ; * tx 1 returns 6         -> f_new
   ; * program returns 4+6=10 -> f_0
+  #;(traces ->tf example-tx-futs-3) ; visualize these results
   (print "done"))
